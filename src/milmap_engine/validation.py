@@ -22,10 +22,13 @@ STANDARD_METADATA_KEYS = {
     "evidence",
     "candidate_score",
     "constraints_checked",
+    "selected_candidate",
+    "ranked_candidates",
     "osm_type",
     "osm_id",
     "rejected_alternatives",
     "selected_role",
+    "placement_profile",
 }
 
 
@@ -359,6 +362,66 @@ def _validate_placement_rationale(
             object_id=object_id,
             phase_id=phase_id,
         )
+    min_alternatives = rules.get("min_rejected_alternatives")
+    if min_alternatives is not None:
+        alternatives = metadata.get("rejected_alternatives")
+        actual = len(alternatives) if isinstance(alternatives, list) else 0
+        threshold = int(min_alternatives)
+        if actual < threshold:
+            _add_issue(
+                issues,
+                "warning",
+                "rejected_alternatives_low",
+                f"Element placement has {actual} rejected alternatives, below {threshold}.",
+                path=path,
+                layer_id=layer_id,
+                object_id=object_id,
+                phase_id=phase_id,
+            )
+    if rules.get("require_constraints_checked") and not _has_non_empty_list(metadata.get("constraints_checked")):
+        _add_issue(
+            issues,
+            "warning",
+            "missing_constraints_checked",
+            "Element placement is missing constraints_checked metadata.",
+            path=path,
+            layer_id=layer_id,
+            object_id=object_id,
+            phase_id=phase_id,
+        )
+    if rules.get("require_selected_role") and not metadata.get("selected_role"):
+        _add_issue(
+            issues,
+            "warning",
+            "missing_selected_role",
+            "Element placement is missing selected_role metadata.",
+            path=path,
+            layer_id=layer_id,
+            object_id=object_id,
+            phase_id=phase_id,
+        )
+    if rules.get("require_source_url_or_osm_id") and not _has_source_identifier(metadata):
+        _add_issue(
+            issues,
+            "warning",
+            "missing_placement_source_identifier",
+            "Element placement is missing source_url or OSM identifier metadata.",
+            path=path,
+            layer_id=layer_id,
+            object_id=object_id,
+            phase_id=phase_id,
+        )
+    if rules.get("reject_low_confidence") and str(metadata.get("confidence") or "").lower() == "low":
+        _add_issue(
+            issues,
+            "warning",
+            "placement_confidence_low",
+            "Element placement confidence is low.",
+            path=path,
+            layer_id=layer_id,
+            object_id=object_id,
+            phase_id=phase_id,
+        )
     min_score = rules.get("min_candidate_score")
     if min_score is not None:
         try:
@@ -394,6 +457,25 @@ def _has_evidence(metadata: dict[str, Any]) -> bool:
     if isinstance(evidence, list) and evidence:
         return True
     return bool(metadata.get("source_url") or metadata.get("osm_id"))
+
+
+def _has_non_empty_list(value: Any) -> bool:
+    return isinstance(value, list) and bool(value)
+
+
+def _has_source_identifier(metadata: dict[str, Any]) -> bool:
+    if metadata.get("source_url") or metadata.get("osm_id"):
+        return True
+    evidence = metadata.get("evidence")
+    if not isinstance(evidence, list):
+        return False
+    for item in evidence:
+        if not isinstance(item, dict):
+            continue
+        tags = item.get("tags")
+        if item.get("source_url") or (isinstance(tags, dict) and tags.get("osm_id")):
+            return True
+    return False
 
 
 def _check_duplicate_names(items: list[dict[str, Any]], role: str, issues: list[dict[str, Any]]) -> None:

@@ -92,6 +92,108 @@ class MapContextTests(unittest.TestCase):
         self.assertTrue(metadata["evidence"])
         self.assertIsInstance(metadata["rejected_alternatives"], list)
         self.assertIn("placement_rationale", metadata)
+        self.assertEqual(metadata["selected_candidate"]["name"], "Central Transit")
+        self.assertGreaterEqual(len(metadata["ranked_candidates"]), 2)
+
+    def test_prefer_tags_boosts_matching_candidate(self):
+        context = MapContext.from_geojson(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {"name": "Close Mall", "shop": "mall", "access": "private"},
+                        "geometry": {"type": "Point", "coordinates": [0.0, 0.0]},
+                    },
+                    {
+                        "type": "Feature",
+                        "properties": {"name": "Public Mall", "shop": "mall", "access": "public"},
+                        "geometry": {"type": "Point", "coordinates": [0.001, 0.0]},
+                    },
+                ],
+            }
+        )
+
+        selection = context.select_candidate(
+            "pickup_hub",
+            near=[0.0, 0.0],
+            preferred_max_distance_m=10_000,
+            prefer_tags={"access": ["public", "yes"]},
+        )
+
+        self.assertEqual(selection.selected.feature.name, "Public Mall")
+        self.assertIn("prefer_tag:access", selection.selected.constraints_checked)
+
+    def test_exclude_tags_rejects_matching_candidate(self):
+        context = MapContext.from_geojson(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {"name": "Private Supermarket", "shop": "supermarket", "access": "private"},
+                        "geometry": {"type": "Point", "coordinates": [0.0, 0.0]},
+                    },
+                    {
+                        "type": "Feature",
+                        "properties": {"name": "Public Mall", "shop": "mall", "access": "public"},
+                        "geometry": {"type": "Point", "coordinates": [0.01, 0.0]},
+                    },
+                ],
+            }
+        )
+
+        selection = context.select_candidate(
+            "pickup_hub",
+            near=[0.0, 0.0],
+            preferred_max_distance_m=10_000,
+            exclude_tags={"access": "private"},
+        )
+
+        self.assertEqual(selection.selected.feature.name, "Public Mall")
+        rejected = {item.feature.name: item for item in selection.rejected_alternatives}
+        self.assertFalse(rejected["Private Supermarket"].eligible)
+        self.assertIn("excluded tag access=private", rejected["Private Supermarket"].rejection_reason)
+
+    def test_polygon_avoidance_rejects_candidate_inside_avoidance_zone(self):
+        context = MapContext.from_geojson(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {"name": "Flooded Mall", "shop": "mall"},
+                        "geometry": {"type": "Point", "coordinates": [0.0, 0.0]},
+                    },
+                    {
+                        "type": "Feature",
+                        "properties": {"name": "Dry Mall", "shop": "mall"},
+                        "geometry": {"type": "Point", "coordinates": [0.02, 0.0]},
+                    },
+                    {
+                        "type": "Feature",
+                        "properties": {"name": "Flood Zone", "natural": "water", "water": "lake"},
+                        "geometry": {
+                            "type": "Polygon",
+                            "coordinates": [[[-0.01, -0.01], [0.01, -0.01], [0.01, 0.01], [-0.01, 0.01], [-0.01, -0.01]]],
+                        },
+                    },
+                ],
+            }
+        )
+
+        selection = context.select_candidate(
+            "pickup_hub",
+            near=[0.0, 0.0],
+            preferred_max_distance_m=10_000,
+            avoid_roles=["avoidance_zone"],
+            avoid_within_m=500,
+        )
+
+        self.assertEqual(selection.selected.feature.name, "Dry Mall")
+        rejected = {item.feature.name: item for item in selection.rejected_alternatives}
+        self.assertFalse(rejected["Flooded Mall"].eligible)
+        self.assertIn("inside avoided avoidance_zone feature Flood Zone", rejected["Flooded Mall"].rejection_reason)
 
     def test_overpass_query_builder_uses_bbox_order(self):
         query = MapContextBuilder().build_query([-1.0, -2.0, 3.0, 4.0], selectors=['nwr["amenity"="hospital"]'])
@@ -133,6 +235,51 @@ class MapContextTests(unittest.TestCase):
         self.assertIn("missing_placement_evidence", codes)
         self.assertIn("missing_rejected_alternatives", codes)
         self.assertIn("missing_candidate_score", codes)
+
+    def test_strict_placement_qa_can_require_new_selection_metadata(self):
+        payload = {
+            "type": "Scenario",
+            "scenario_id": "fixture",
+            "scenario_name": "fixture",
+            "map_context": {},
+            "layers": [],
+            "objects": [
+                {
+                    "id": "node",
+                    "type": "supply_node",
+                    "name": "Node",
+                    "style": {"marker_color": "#2563eb"},
+                    "properties": {},
+                    "metadata": {
+                        "placement_rationale": "Looks useful.",
+                        "candidate_score": 60,
+                        "confidence": "low",
+                        "rejected_alternatives": [],
+                    },
+                    "geometry": {"type": "Point", "coordinates": [0.0, 0.0]},
+                }
+            ],
+            "geojson": {"type": "FeatureCollection", "features": []},
+        }
+        qa = validate_scenario_payload(
+            payload,
+            validation_rules={
+                "placement_reasoning": {
+                    "enabled": True,
+                    "require_constraints_checked": True,
+                    "require_selected_role": True,
+                    "require_source_url_or_osm_id": True,
+                    "min_rejected_alternatives": 1,
+                    "reject_low_confidence": True,
+                }
+            },
+        )
+        codes = {issue["code"] for issue in qa["issues"]}
+        self.assertIn("missing_constraints_checked", codes)
+        self.assertIn("missing_selected_role", codes)
+        self.assertIn("missing_placement_source_identifier", codes)
+        self.assertIn("rejected_alternatives_low", codes)
+        self.assertIn("placement_confidence_low", codes)
 
 
 if __name__ == "__main__":

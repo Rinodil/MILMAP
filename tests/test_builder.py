@@ -252,8 +252,11 @@ class ScenarioBuilderTests(unittest.TestCase):
         self.assertEqual(obj["geometry"]["coordinates"], [0.0, 0.0])
         self.assertTrue(obj["metadata"]["map_context_resolved"])
         self.assertEqual(obj["metadata"]["selected_role"], "pickup_hub")
+        self.assertEqual(obj["metadata"]["placement_profile"], "civil_emergency")
         self.assertGreater(obj["metadata"]["candidate_score"], 40)
         self.assertEqual(obj["metadata"]["evidence"][0]["name"], "Central Transit")
+        self.assertEqual(obj["metadata"]["selected_candidate"]["name"], "Central Transit")
+        self.assertGreaterEqual(len(obj["metadata"]["ranked_candidates"]), 2)
         self.assertTrue(obj["metadata"]["rejected_alternatives"])
 
         layer = payload["layers"][0]

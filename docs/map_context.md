@@ -33,7 +33,7 @@ The classifier assigns one or more roles to each feature:
 
 Roles are evidence hints, not final decisions. Scenario builders should request
 candidates by role and pass constraints such as `near`, `far_from`,
-`avoid_roles`, and `required_tags`.
+`avoid_roles`, `required_tags`, `prefer_tags`, and `exclude_tags`.
 
 ## Example
 
@@ -75,7 +75,10 @@ Then annotate any layer or object metadata:
       "near": [-81.3797, 28.5377],
       "preferred_max_distance_m": 12000,
       "avoid_roles": ["avoidance_zone"],
-      "avoid_within_m": 500
+      "avoid_within_m": 500,
+      "prefer_tags": { "access": ["yes", "public"] },
+      "exclude_tags": { "access": ["private", "no"] },
+      "max_candidates": 8
     },
     "placement_rationale": "Select the best mapped pickup hub near the origin and outside mapped avoidance zones."
   }
@@ -94,8 +97,16 @@ The returned metadata includes:
 - `candidate_score`
 - `constraints_checked`
 - `evidence`
+- `selected_candidate`
+- `ranked_candidates`
 - `rejected_alternatives`
 - `placement_rationale`
+
+`map_context.placement_profile` or `map_context.mode` can select a scoring
+profile. Built-in profiles include `default`, `civil_emergency`, `evacuation`,
+`logistics`, `training`, and `infrastructure`. Profiles change weights for role
+fit, distance, source confidence, mapped footprints, preferred tags, required
+tags, and avoidance clearance while preserving the same input contract.
 
 Copy that metadata into the scenario element. Then run:
 
@@ -107,11 +118,16 @@ validate_scenario_payload(
             "enabled": True,
             "require_evidence": True,
             "require_rejected_alternatives": True,
+            "require_constraints_checked": True,
+            "require_selected_role": True,
             "min_candidate_score": 40,
         }
     },
 )
 ```
+
+Stricter builds can also set `require_source_url_or_osm_id`,
+`min_rejected_alternatives`, or `reject_low_confidence`.
 
 ## Overpass
 

@@ -149,10 +149,12 @@ class ScenarioBuilder:
         if context is None:
             return build_plan
 
+        map_context = self._map_context(build_plan)
+        default_profile = _default_placement_profile(map_context)
         phases = []
         for phase in build_plan.phases:
-            layers = [self._resolve_layer(layer, context) for layer in phase.layers]
-            objects = [self._resolve_object(item, context) for item in phase.objects]
+            layers = [self._resolve_layer(layer, context, default_profile=default_profile) for layer in phase.layers]
+            objects = [self._resolve_object(item, context, default_profile=default_profile) for item in phase.objects]
             phases.append(replace(phase, layers=layers, objects=objects))
         return replace(
             build_plan,
@@ -189,8 +191,14 @@ class ScenarioBuilder:
             return self.map_context_builder.build_from_overpass(context["bounds"])
         return None
 
-    def _resolve_layer(self, layer: ScenarioLayerPlan, context: MapContext) -> ScenarioLayerPlan:
-        spec = _selection_spec(layer.metadata)
+    def _resolve_layer(
+        self,
+        layer: ScenarioLayerPlan,
+        context: MapContext,
+        *,
+        default_profile: str | None,
+    ) -> ScenarioLayerPlan:
+        spec = _selection_spec(layer.metadata, default_profile=default_profile)
         if spec is None:
             return layer
         selection = context.select_candidate(**spec["select"])
@@ -198,6 +206,7 @@ class ScenarioBuilder:
             **layer.metadata,
             **selection.metadata(spec["rationale"]),
             "map_context_resolved": True,
+            "placement_profile": spec["select"].get("placement_profile"),
         }
         parameters = dict(layer.parameters)
         target_parameter = spec["target_parameter"] or _default_layer_target_parameter(layer)
@@ -205,8 +214,14 @@ class ScenarioBuilder:
             parameters[target_parameter] = list(selection.selected.feature.coordinate)
         return replace(layer, parameters=parameters, metadata=metadata)
 
-    def _resolve_object(self, item: ScenarioObjectPlan, context: MapContext) -> ScenarioObjectPlan:
-        spec = _selection_spec(item.metadata)
+    def _resolve_object(
+        self,
+        item: ScenarioObjectPlan,
+        context: MapContext,
+        *,
+        default_profile: str | None,
+    ) -> ScenarioObjectPlan:
+        spec = _selection_spec(item.metadata, default_profile=default_profile)
         if spec is None:
             return item
         selection = context.select_candidate(**spec["select"])
@@ -214,6 +229,7 @@ class ScenarioBuilder:
             **item.metadata,
             **selection.metadata(spec["rationale"]),
             "map_context_resolved": True,
+            "placement_profile": spec["select"].get("placement_profile"),
         }
         placement = dict(item.placement)
         if placement.get("mode") in {None, "point"}:
@@ -353,13 +369,14 @@ def _phase_status(qa: dict[str, Any], phase_id: str) -> str:
     return "pass"
 
 
-def _selection_spec(metadata: dict[str, Any]) -> dict[str, Any] | None:
+def _selection_spec(metadata: dict[str, Any], *, default_profile: str | None = None) -> dict[str, Any] | None:
     role = metadata.get("map_context_role") or metadata.get("selected_role")
     if not role:
         return None
     constraints = dict(metadata.get("map_context_constraints") or {})
     rationale = metadata.get("placement_rationale")
     target_parameter = constraints.pop("target_parameter", metadata.get("map_context_target_parameter", None))
+    placement_profile = constraints.pop("placement_profile", metadata.get("placement_profile", default_profile))
     select = {
         "role": str(role),
         "near": constraints.pop("near", None),
@@ -368,6 +385,12 @@ def _selection_spec(metadata: dict[str, Any]) -> dict[str, Any] | None:
         "avoid_roles": constraints.pop("avoid_roles", None),
         "avoid_within_m": float(constraints.pop("avoid_within_m", 500)),
         "required_tags": constraints.pop("required_tags", None),
+        "prefer_tags": constraints.pop("prefer_tags", None),
+        "exclude_tags": constraints.pop("exclude_tags", None),
+        "within_bounds": constraints.pop("within_bounds", None),
+        "max_candidates": int(constraints.pop("max_candidates", 8)),
+        "placement_profile": str(placement_profile) if placement_profile else None,
+        "weights": constraints.pop("weights", None),
     }
     select.update(constraints)
     return {
@@ -390,3 +413,8 @@ def _optional_bounds(value: Any) -> list[float] | None:
     if not isinstance(value, list) or len(value) != 4:
         return None
     return [float(item) for item in value]
+
+
+def _default_placement_profile(context: dict[str, Any]) -> str | None:
+    value = context.get("placement_profile") or context.get("mode") or context.get("purpose")
+    return str(value) if value else None

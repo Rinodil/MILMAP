@@ -23,6 +23,61 @@ ROLE_LABELS: dict[str, str] = {
 }
 
 
+DEFAULT_PLACEMENT_WEIGHTS: dict[str, float] = {
+    "role": 12.0,
+    "distance": 30.0,
+    "named_feature": 4.0,
+    "footprint": 2.0,
+    "required_tag": 8.0,
+    "preferred_tag": 6.0,
+    "avoidance_clearance": 10.0,
+    "far_from_clearance": 12.0,
+    "source_confidence": 0.0,
+}
+
+
+PLACEMENT_PROFILES: dict[str, dict[str, float]] = {
+    "default": DEFAULT_PLACEMENT_WEIGHTS,
+    "civil_emergency": {
+        **DEFAULT_PLACEMENT_WEIGHTS,
+        "role": 14.0,
+        "footprint": 5.0,
+        "required_tag": 12.0,
+        "preferred_tag": 8.0,
+        "source_confidence": 8.0,
+        "avoidance_clearance": 16.0,
+    },
+    "evacuation": {
+        **DEFAULT_PLACEMENT_WEIGHTS,
+        "role": 13.0,
+        "distance": 35.0,
+        "preferred_tag": 7.0,
+        "avoidance_clearance": 18.0,
+        "source_confidence": 6.0,
+    },
+    "logistics": {
+        **DEFAULT_PLACEMENT_WEIGHTS,
+        "role": 13.0,
+        "required_tag": 12.0,
+        "preferred_tag": 10.0,
+        "source_confidence": 8.0,
+    },
+    "training": {
+        **DEFAULT_PLACEMENT_WEIGHTS,
+        "role": 11.0,
+        "distance": 25.0,
+        "footprint": 4.0,
+        "source_confidence": 4.0,
+    },
+    "infrastructure": {
+        **DEFAULT_PLACEMENT_WEIGHTS,
+        "role": 14.0,
+        "footprint": 6.0,
+        "source_confidence": 10.0,
+    },
+}
+
+
 DEFAULT_CONTEXT_SELECTORS = [
     'nwr["amenity"~"hospital|clinic|school|college|university|bus_station|parking|fuel|townhall|courthouse|police|fire_station|community_centre|place_of_worship|marketplace|social_facility"]',
     'nwr["shop"~"mall|supermarket|department_store|wholesale"]',
@@ -89,9 +144,11 @@ class MapCandidate:
 class MapSelection:
     selected: MapCandidate
     rejected_alternatives: list[MapCandidate] = field(default_factory=list)
+    ranked_candidates: list[MapCandidate] = field(default_factory=list)
 
     def metadata(self, rationale: str | None = None) -> dict[str, Any]:
         feature = self.selected.feature
+        ranked = self.ranked_candidates or [self.selected, *self.rejected_alternatives]
         metadata: dict[str, Any] = {
             "source_type": "map_context",
             "source_name": feature.source_name,
@@ -110,6 +167,8 @@ class MapSelection:
                     "source_url": feature.source_url,
                 }
             ],
+            "selected_candidate": self.selected.summary(),
+            "ranked_candidates": [item.summary() for item in ranked],
             "rejected_alternatives": [item.summary() for item in self.rejected_alternatives],
         }
         if rationale:
@@ -159,8 +218,15 @@ class MapContext:
         avoid_roles: list[str] | None = None,
         avoid_within_m: float = 500,
         required_tags: dict[str, Any] | None = None,
+        prefer_tags: dict[str, Any] | None = None,
+        exclude_tags: dict[str, Any] | None = None,
+        within_bounds: list[float] | bool | None = None,
+        placement_profile: str | None = None,
+        weights: dict[str, Any] | None = None,
         limit: int | None = 10,
     ) -> list[MapCandidate]:
+        resolved_weights = _placement_weights(placement_profile, weights)
+        bounds = _candidate_bounds(within_bounds, self.bounds)
         candidates = [
             self._candidate(
                 feature,
@@ -171,23 +237,30 @@ class MapContext:
                 avoid_roles=avoid_roles or [],
                 avoid_within_m=avoid_within_m,
                 required_tags=required_tags or {},
+                prefer_tags=prefer_tags or {},
+                exclude_tags=exclude_tags or {},
+                bounds=bounds,
+                weights=resolved_weights,
+                placement_profile=placement_profile,
             )
             for feature in self.features
             if feature.role_score(role) > 0
         ]
-        candidates.sort(key=lambda item: (item.eligible, item.score), reverse=True)
+        candidates.sort(key=lambda item: (item.eligible, item.score, item.feature.name), reverse=True)
         return candidates[:limit] if limit is not None else candidates
 
     def select_candidate(self, role: str, **kwargs: Any) -> MapSelection:
+        max_candidates = int(kwargs.pop("max_candidates", 8))
         candidates = self.candidates(role, limit=None, **kwargs)
         for index, candidate in enumerate(candidates):
             if candidate.eligible:
+                ranked = candidates[:max(max_candidates, 1)]
                 rejected = [
                     item
-                    for item in candidates[: max(8, index + 4)]
+                    for item in candidates[: max(max_candidates, index + 4)]
                     if item.feature.id != candidate.feature.id
                 ][:5]
-                return MapSelection(selected=candidate, rejected_alternatives=rejected)
+                return MapSelection(selected=candidate, rejected_alternatives=rejected, ranked_candidates=ranked)
         raise GeoJSONError(f"No eligible map-context candidate found for role {role!r}.")
 
     def _candidate(
@@ -201,20 +274,39 @@ class MapContext:
         avoid_roles: list[str],
         avoid_within_m: float,
         required_tags: dict[str, Any],
+        prefer_tags: dict[str, Any],
+        exclude_tags: dict[str, Any],
+        bounds: list[float] | None,
+        weights: dict[str, float],
+        placement_profile: str | None,
     ) -> MapCandidate:
-        score = feature.role_score(role) * 12.0
+        score = feature.role_score(role) * weights["role"]
         reasons = [f"{ROLE_LABELS.get(role, role)} role score {feature.role_score(role):.1f}."]
         checked = [f"role:{role}"]
+        if placement_profile:
+            checked.append(f"placement_profile:{placement_profile}")
         eligible = True
         rejection_reason = None
         distance_m = None
 
         if feature.tags.get("name"):
-            score += 4.0
+            score += weights["named_feature"]
             reasons.append("Named map feature.")
         if feature.geometry and feature.geometry.get("type") in {"Polygon", "MultiPolygon"}:
-            score += 2.0
+            score += weights["footprint"]
             reasons.append("Area feature with mapped footprint.")
+
+        source_score = _source_confidence_score(feature)
+        if source_score and weights["source_confidence"]:
+            score += source_score * weights["source_confidence"]
+            reasons.append("Source metadata supports confidence.")
+
+        if bounds is not None:
+            checked.append("within_bounds")
+            if not _feature_inside_bounds(feature, bounds):
+                eligible = False
+                rejection_reason = "outside required bounds"
+                score -= 100.0
 
         for key, expected in required_tags.items():
             checked.append(f"required_tag:{key}")
@@ -223,13 +315,26 @@ class MapContext:
                 rejection_reason = f"missing required tag {key}={expected}"
                 score -= 100.0
             else:
-                score += 8.0
+                score += weights["required_tag"]
                 reasons.append(f"Matches required tag {key}.")
+
+        for key, expected in prefer_tags.items():
+            checked.append(f"prefer_tag:{key}")
+            if _tag_matches(feature.tags.get(key), expected):
+                score += weights["preferred_tag"]
+                reasons.append(f"Matches preferred tag {key}.")
+
+        for key, expected in exclude_tags.items():
+            checked.append(f"exclude_tag:{key}")
+            if _tag_matches(feature.tags.get(key), expected):
+                eligible = False
+                rejection_reason = f"excluded tag {key}={feature.tags.get(key)}"
+                score -= 100.0
 
         if near is not None:
             checked.append("near")
             distance_m = haversine_m(feature.coordinate, near)
-            distance_score = max(0.0, 1.0 - (distance_m / float(preferred_max_distance_m))) * 30.0
+            distance_score = max(0.0, 1.0 - (distance_m / float(preferred_max_distance_m))) * weights["distance"]
             score += distance_score
             reasons.append(f"{distance_m:.0f} m from preferred anchor.")
 
@@ -246,7 +351,7 @@ class MapContext:
                 rejection_reason = f"{actual:.0f} m from {label}, below {min_distance:.0f} m minimum"
                 score -= 60.0
             else:
-                score += min(12.0, (actual - min_distance) / max(min_distance, 1.0) * 8.0)
+                score += min(weights["far_from_clearance"], (actual - min_distance) / max(min_distance, 1.0) * 8.0)
                 reasons.append(f"{actual:.0f} m from {label}.")
 
         if avoid_roles:
@@ -254,14 +359,19 @@ class MapContext:
             nearest = self._nearest_role_feature(feature.coordinate, avoid_roles)
             if nearest is not None:
                 avoid_feature, actual = nearest
-                if actual < avoid_within_m:
+                inside_avoided_geometry = _point_inside_feature_geometry(feature.coordinate, avoid_feature)
+                if inside_avoided_geometry:
+                    eligible = False
+                    rejection_reason = f"inside avoided {','.join(avoid_roles)} feature {avoid_feature.name}"
+                    score -= 80.0
+                elif actual < avoid_within_m:
                     eligible = False
                     rejection_reason = (
                         f"{actual:.0f} m from avoided {','.join(avoid_roles)} feature {avoid_feature.name}"
                     )
                     score -= 60.0
                 else:
-                    score += min(10.0, actual / max(avoid_within_m, 1.0))
+                    score += min(weights["avoidance_clearance"], actual / max(avoid_within_m, 1.0))
                     reasons.append(f"{actual:.0f} m from nearest avoided role.")
 
         return MapCandidate(
@@ -280,11 +390,12 @@ class MapContext:
         coordinate: list[float],
         roles: list[str],
     ) -> tuple[MapFeature, float] | None:
-        matches = [
-            (feature, haversine_m(coordinate, feature.coordinate))
-            for feature in self.features
-            if any(feature.role_score(role) > 0 for role in roles)
-        ]
+        matches = []
+        for feature in self.features:
+            if not any(feature.role_score(role) > 0 for role in roles):
+                continue
+            distance = 0.0 if _point_inside_feature_geometry(coordinate, feature) else haversine_m(coordinate, feature.coordinate)
+            matches.append((feature, distance))
         if not matches:
             return None
         matches.sort(key=lambda item: item[1])
@@ -498,6 +609,96 @@ def _evidence_tags(tags: dict[str, Any]) -> dict[str, Any]:
         "osm_id",
     ]
     return {key: tags[key] for key in keys if key in tags}
+
+
+def _placement_weights(profile: str | None, overrides: dict[str, Any] | None) -> dict[str, float]:
+    key = str(profile or "default").strip().lower()
+    weights = dict(PLACEMENT_PROFILES.get(key, DEFAULT_PLACEMENT_WEIGHTS))
+    if isinstance(overrides, dict):
+        for name, value in overrides.items():
+            if name in DEFAULT_PLACEMENT_WEIGHTS:
+                weights[name] = float(value)
+    return weights
+
+
+def _candidate_bounds(value: list[float] | bool | None, context_bounds: list[float] | None) -> list[float] | None:
+    if isinstance(value, list) and len(value) == 4:
+        return [float(item) for item in value]
+    if value is True and context_bounds is not None:
+        return [float(item) for item in context_bounds]
+    return None
+
+
+def _source_confidence_score(feature: MapFeature) -> float:
+    score = 0.0
+    if feature.tags.get("osm_type") and feature.tags.get("osm_id"):
+        score += 0.45
+    if feature.source_url:
+        score += 0.20
+    if feature.tags.get("name"):
+        score += 0.15
+    if feature.geometry and feature.geometry.get("type") in {"Polygon", "MultiPolygon", "LineString", "MultiLineString"}:
+        score += 0.20
+    return min(1.0, score)
+
+
+def _feature_inside_bounds(feature: MapFeature, bounds: list[float]) -> bool:
+    west, south, east, north = bounds
+    if feature.geometry is not None:
+        try:
+            min_lon, min_lat, max_lon, max_lat = geometry_bounds(feature.geometry)
+        except GeoJSONError:
+            min_lon = max_lon = feature.coordinate[0]
+            min_lat = max_lat = feature.coordinate[1]
+        return min_lon >= west and max_lon <= east and min_lat >= south and max_lat <= north
+    lon, lat = feature.coordinate
+    return west <= lon <= east and south <= lat <= north
+
+
+def _point_inside_feature_geometry(point: list[float], feature: MapFeature) -> bool:
+    geometry = feature.geometry
+    if not isinstance(geometry, dict):
+        return False
+    return _point_inside_geometry(point, geometry)
+
+
+def _point_inside_geometry(point: list[float], geometry: dict[str, Any]) -> bool:
+    geometry_type = geometry.get("type")
+    coordinates = geometry.get("coordinates")
+    if geometry_type == "Polygon" and isinstance(coordinates, list):
+        return _point_inside_polygon(point, coordinates)
+    if geometry_type == "MultiPolygon" and isinstance(coordinates, list):
+        return any(_point_inside_polygon(point, polygon) for polygon in coordinates if isinstance(polygon, list))
+    return False
+
+
+def _point_inside_polygon(point: list[float], polygon: list[Any]) -> bool:
+    if not polygon:
+        return False
+    outer = polygon[0]
+    if not _point_inside_ring(point, outer):
+        return False
+    holes = polygon[1:]
+    return not any(_point_inside_ring(point, hole) for hole in holes if isinstance(hole, list))
+
+
+def _point_inside_ring(point: list[float], ring: list[Any]) -> bool:
+    if not isinstance(ring, list) or len(ring) < 4:
+        return False
+    x, y = float(point[0]), float(point[1])
+    inside = False
+    previous = ring[-1]
+    for current in ring:
+        if not _is_coord(current) or not _is_coord(previous):
+            previous = current
+            continue
+        x1, y1 = float(previous[0]), float(previous[1])
+        x2, y2 = float(current[0]), float(current[1])
+        intersects = ((y1 > y) != (y2 > y)) and (x < ((x2 - x1) * (y - y1) / ((y2 - y1) or 1e-12) + x1))
+        if intersects:
+            inside = not inside
+        previous = current
+    return inside
 
 
 def _confidence_for_score(score: float) -> str:
