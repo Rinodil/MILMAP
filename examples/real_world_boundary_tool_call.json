@@ -1,0 +1,12 @@
+{
+  "pipeline": "real_world",
+  "operation": "real_world_boundary",
+  "parameters": {
+    "name": "Hillsborough County",
+    "admin_level": "6"
+  },
+  "properties": {
+    "name": "public-boundary"
+  }
+}
+

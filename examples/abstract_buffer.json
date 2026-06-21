@@ -1,0 +1,13 @@
+{
+  "pipeline": "abstract",
+  "operation": "buffer",
+  "parameters": {
+    "center": [-82.324, 27.845],
+    "radius_miles": 5,
+    "steps": 64
+  },
+  "properties": {
+    "name": "five-mile-radius"
+  }
+}
+

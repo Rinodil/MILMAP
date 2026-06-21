@@ -1,0 +1,12 @@
+{
+  "pipeline": "abstract",
+  "operation": "hex_grid",
+  "parameters": {
+    "bounds": [-82.5, 27.7, -82.1, 28.0],
+    "radius_m": 1000
+  },
+  "properties": {
+    "name": "search-grid"
+  }
+}
+

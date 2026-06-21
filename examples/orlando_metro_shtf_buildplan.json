@@ -1,0 +1,528 @@
+{
+  "scenario_name": "orlando_metro_shtf",
+  "map_context": {
+    "mode": "civil_emergency_demo",
+    "center": [-81.3792, 28.5383],
+    "zoom": 10,
+    "bounds": [-81.58, 28.34, -81.14, 28.72]
+  },
+  "metadata": {
+    "scenario_type": "civil_emergency_stress_test",
+    "source": "OpenStreetMap via Overpass API plus deterministic generated overlays",
+    "osm_wikidata": "Q49233",
+    "safety_note": "This scenario models civilian disaster-response logistics (hurricane landfall plus grid-down), not combat operations."
+  },
+  "validation_rules": {
+    "max_features": 4000
+  },
+  "dependencies": {
+    "Airport Air Bridge Corridor": ["Downtown Emergency Operations Center"],
+    "North Hospital Resupply Corridor": ["AdventHealth Orlando"],
+    "Urban Search Grid": ["Downtown Grid-Down Core"],
+    "SAR Priority Sector West": ["South Flood Recon Sector"]
+  },
+  "phases": [
+    {
+      "id": "base_context",
+      "name": "Base Context",
+      "order": 1,
+      "objective": "Establish the operating geography from authoritative boundaries.",
+      "metadata": {
+        "source_type": "real_world",
+        "source_name": "OpenStreetMap via Overpass API",
+        "source_url": "https://overpass-api.de/api/interpreter",
+        "confidence": "high",
+        "assumptions": [
+          "Administrative boundary retrieved live from OSM; member linework is preserved rather than dissolved into a filled polygon."
+        ]
+      },
+      "layers": [
+        {
+          "type": "region_boundary",
+          "name": "Orlando City Administrative Boundary",
+          "operation": "overpass_query",
+          "pipeline": "real_world",
+          "parameters": {
+            "query": "[out:json][timeout:90];rel[\"boundary\"=\"administrative\"][\"admin_level\"=\"8\"][\"wikidata\"=\"Q49233\"];out geom;"
+          },
+          "metadata": {
+            "source_name": "OpenStreetMap relation (admin_level 8, wikidata Q49233)",
+            "source_url": "https://overpass-api.de/api/interpreter"
+          },
+          "style": {
+            "stroke_color": "#111827",
+            "stroke_width": 3,
+            "fill_opacity": 0
+          }
+        },
+        {
+          "type": "region_boundary",
+          "name": "Metro Operating Extent",
+          "operation": "bbox",
+          "pipeline": "direct",
+          "parameters": {
+            "bounds": [-81.58, 28.34, -81.14, 28.72]
+          },
+          "style": {
+            "stroke_color": "#475569",
+            "stroke_width": 1,
+            "fill_opacity": 0.02
+          }
+        }
+      ]
+    },
+    {
+      "id": "command_and_control",
+      "name": "Command and Control",
+      "order": 2,
+      "objective": "Stand up emergency operations and the coordination footprint.",
+      "metadata": {
+        "source_type": "planned",
+        "confidence": "medium",
+        "assumptions": [
+          "EOC primary service radius assumes an 8 km ground-coordination reach.",
+          "Regional ring assumes a 20 km mutual-aid coordination radius."
+        ]
+      },
+      "layers": [
+        {
+          "type": "perimeter",
+          "name": "EOC Primary Service Area",
+          "operation": "buffer",
+          "parameters": {
+            "center": [-81.3792, 28.5383],
+            "radius_km": 8,
+            "steps": 72
+          },
+          "style": {
+            "fill_color": "#2563eb",
+            "fill_opacity": 0.1,
+            "stroke_color": "#1d4ed8"
+          }
+        },
+        {
+          "type": "range_ring",
+          "name": "Regional Mutual-Aid Ring",
+          "operation": "range_ring",
+          "parameters": {
+            "center": [-81.3792, 28.5383],
+            "radius_km": 20,
+            "steps": 120
+          },
+          "style": {
+            "stroke_color": "#1d4ed8",
+            "stroke_width": 2,
+            "fill_opacity": 0
+          }
+        }
+      ],
+      "objects": [
+        {
+          "type": "base",
+          "name": "Downtown Emergency Operations Center",
+          "placement": { "mode": "point", "coordinate": [-81.3792, 28.5383] },
+          "properties": { "role": "coordination", "status": "active" }
+        },
+        {
+          "type": "base",
+          "name": "Alternate EOC (Convention Center)",
+          "placement": { "mode": "point", "coordinate": [-81.4694, 28.4248] },
+          "properties": { "role": "coordination_backup", "status": "standby" }
+        },
+        {
+          "type": "annotation",
+          "name": "Downtown Comms Relay",
+          "placement": { "mode": "point", "coordinate": [-81.378, 28.551] },
+          "properties": { "role": "communications", "status": "degraded" }
+        },
+        {
+          "type": "annotation",
+          "name": "South County Comms Relay",
+          "placement": { "mode": "point", "coordinate": [-81.4, 28.42] },
+          "properties": { "role": "communications", "status": "active" }
+        }
+      ]
+    },
+    {
+      "id": "hazard_assessment",
+      "name": "Hazard Assessment",
+      "order": 3,
+      "objective": "Map degraded-infrastructure and hazard zones across the metro.",
+      "metadata": {
+        "source_type": "modeled",
+        "confidence": "low",
+        "assumptions": [
+          "Hazard polygons are planning estimates, not sensor-confirmed footprints.",
+          "Grid-down core is modeled as an octagon centered on the downtown substation cluster."
+        ]
+      },
+      "layers": [
+        {
+          "type": "restricted_zone",
+          "name": "Downtown Grid-Down Core",
+          "operation": "regular_polygon",
+          "parameters": {
+            "center": [-81.3792, 28.5383],
+            "radius_km": 3.4,
+            "sides": 8,
+            "rotation_deg": 22.5
+          },
+          "style": {
+            "fill_color": "#f97316",
+            "fill_opacity": 0.22,
+            "stroke_color": "#c2410c"
+          }
+        },
+        {
+          "type": "observation_zone",
+          "name": "North Debris Assessment Sector",
+          "operation": "sector",
+          "parameters": {
+            "center": [-81.3792, 28.5383],
+            "radius_km": 11,
+            "start_bearing": 315,
+            "end_bearing": 45,
+            "steps": 36
+          },
+          "style": {
+            "fill_color": "#eab308",
+            "fill_opacity": 0.18,
+            "stroke_color": "#a16207"
+          }
+        },
+        {
+          "type": "observation_zone",
+          "name": "South Flood Recon Sector",
+          "operation": "sector",
+          "parameters": {
+            "center": [-81.3792, 28.5383],
+            "radius_km": 14,
+            "start_bearing": 135,
+            "end_bearing": 215,
+            "steps": 36
+          },
+          "style": {
+            "fill_color": "#0ea5e9",
+            "fill_opacity": 0.14,
+            "stroke_color": "#0369a1"
+          }
+        },
+        {
+          "type": "restricted_zone",
+          "name": "Low-Mobility Flood Pocket A",
+          "operation": "polygon",
+          "pipeline": "direct",
+          "parameters": {
+            "rings": [
+              [
+                [-81.407, 28.516],
+                [-81.386, 28.509],
+                [-81.373, 28.519],
+                [-81.386, 28.533],
+                [-81.406, 28.529]
+              ]
+            ]
+          },
+          "style": {
+            "fill_color": "#38bdf8",
+            "fill_opacity": 0.22,
+            "stroke_color": "#0284c7"
+          }
+        },
+        {
+          "type": "restricted_zone",
+          "name": "Low-Mobility Flood Pocket B",
+          "operation": "polygon",
+          "pipeline": "direct",
+          "parameters": {
+            "rings": [
+              [
+                [-81.352, 28.563],
+                [-81.326, 28.558],
+                [-81.316, 28.575],
+                [-81.337, 28.589],
+                [-81.359, 28.579]
+              ]
+            ]
+          },
+          "style": {
+            "fill_color": "#38bdf8",
+            "fill_opacity": 0.2,
+            "stroke_color": "#0284c7"
+          }
+        },
+        {
+          "type": "restricted_zone",
+          "name": "West Wind-Damage Belt",
+          "operation": "polygon",
+          "pipeline": "direct",
+          "parameters": {
+            "rings": [
+              [
+                [-81.5, 28.5],
+                [-81.47, 28.49],
+                [-81.45, 28.52],
+                [-81.48, 28.55],
+                [-81.51, 28.53]
+              ]
+            ]
+          },
+          "style": {
+            "fill_color": "#fb7185",
+            "fill_opacity": 0.18,
+            "stroke_color": "#be123c"
+          }
+        }
+      ]
+    },
+    {
+      "id": "logistics",
+      "name": "Logistics Corridors",
+      "order": 4,
+      "objective": "Establish supply corridors and distribution nodes.",
+      "metadata": {
+        "source_type": "planned",
+        "confidence": "medium",
+        "assumptions": [
+          "Corridor widths are sized for two-way relief-convoy traffic.",
+          "Corridor centerlines follow primary arterials, not lane-accurate routing."
+        ]
+      },
+      "layers": [
+        {
+          "type": "corridor",
+          "name": "Airport Air Bridge Corridor",
+          "operation": "corridor",
+          "parameters": {
+            "coordinates": [
+              [-81.3792, 28.5383],
+              [-81.357, 28.503],
+              [-81.331, 28.468],
+              [-81.3089, 28.4312]
+            ],
+            "width_m": 1400
+          },
+          "style": {
+            "fill_color": "#0ea5e9",
+            "fill_opacity": 0.2,
+            "stroke_color": "#0369a1"
+          }
+        },
+        {
+          "type": "corridor",
+          "name": "West Shelter Supply Corridor",
+          "operation": "corridor",
+          "parameters": {
+            "coordinates": [
+              [-81.3792, 28.5383],
+              [-81.42, 28.5],
+              [-81.4694, 28.4248]
+            ],
+            "width_m": 1000
+          },
+          "style": {
+            "fill_color": "#16a34a",
+            "fill_opacity": 0.2,
+            "stroke_color": "#15803d"
+          }
+        },
+        {
+          "type": "corridor",
+          "name": "East Relief Staging Corridor",
+          "operation": "corridor",
+          "parameters": {
+            "coordinates": [
+              [-81.3792, 28.5383],
+              [-81.321, 28.566],
+              [-81.262, 28.586],
+              [-81.2001, 28.6024]
+            ],
+            "width_m": 1100
+          },
+          "style": {
+            "fill_color": "#22c55e",
+            "fill_opacity": 0.18,
+            "stroke_color": "#15803d"
+          }
+        },
+        {
+          "type": "corridor",
+          "name": "North Hospital Resupply Corridor",
+          "operation": "corridor",
+          "parameters": {
+            "coordinates": [
+              [-81.3792, 28.5383],
+              [-81.378, 28.555],
+              [-81.376, 28.571]
+            ],
+            "width_m": 900
+          },
+          "style": {
+            "fill_color": "#34d399",
+            "fill_opacity": 0.18,
+            "stroke_color": "#0f766e"
+          }
+        }
+      ],
+      "objects": [
+        {
+          "type": "supply_node",
+          "name": "Water Distribution North",
+          "placement": { "mode": "point", "coordinate": [-81.3693, 28.5732] },
+          "properties": { "resource": "water", "status": "active" }
+        },
+        {
+          "type": "supply_node",
+          "name": "Food Distribution West",
+          "placement": { "mode": "point", "coordinate": [-81.4029, 28.5392] },
+          "properties": { "resource": "food", "status": "active" }
+        },
+        {
+          "type": "supply_node",
+          "name": "Fuel Cache South",
+          "placement": { "mode": "point", "coordinate": [-81.39, 28.45] },
+          "properties": { "resource": "fuel", "status": "planned" }
+        },
+        {
+          "type": "supply_node",
+          "name": "Relief Staging East",
+          "placement": { "mode": "point", "coordinate": [-81.2001, 28.6024] },
+          "properties": { "resource": "staging", "status": "planned" }
+        },
+        {
+          "type": "objective_marker",
+          "name": "Airport Air Bridge",
+          "placement": { "mode": "point", "coordinate": [-81.3089, 28.4312] },
+          "properties": { "role": "air_logistics", "status": "active" }
+        }
+      ]
+    },
+    {
+      "id": "life_safety",
+      "name": "Life-Safety Sites",
+      "order": 5,
+      "objective": "Place shelters, medical sites, and access control.",
+      "metadata": {
+        "source_type": "planned",
+        "confidence": "medium",
+        "assumptions": [
+          "Shelter and hospital sites are mapped to known public facilities.",
+          "Checkpoint locations assume major-corridor access control only."
+        ]
+      },
+      "objects": [
+        {
+          "type": "outpost",
+          "name": "North Medical Triage",
+          "placement": { "mode": "point", "coordinate": [-81.3693, 28.5732] },
+          "properties": { "role": "medical_triage", "status": "active" },
+          "style": { "marker_color": "#dc2626", "stroke_color": "#b91c1c" }
+        },
+        {
+          "type": "outpost",
+          "name": "South Medical Triage",
+          "placement": { "mode": "point", "coordinate": [-81.3807, 28.5264] },
+          "properties": { "role": "medical_triage", "status": "active" },
+          "style": { "marker_color": "#dc2626", "stroke_color": "#b91c1c" }
+        },
+        {
+          "type": "outpost",
+          "name": "AdventHealth Orlando",
+          "placement": { "mode": "point", "coordinate": [-81.376, 28.571] },
+          "properties": { "role": "hospital", "status": "active" }
+        },
+        {
+          "type": "outpost",
+          "name": "Orlando Health ORMC",
+          "placement": { "mode": "point", "coordinate": [-81.387, 28.523] },
+          "properties": { "role": "hospital", "status": "active" }
+        },
+        {
+          "type": "label",
+          "name": "Convention Center Mega-Shelter",
+          "placement": { "mode": "point", "coordinate": [-81.4694, 28.4248] },
+          "properties": { "role": "shelter", "status": "planned" }
+        },
+        {
+          "type": "label",
+          "name": "Camping World Stadium Shelter",
+          "placement": { "mode": "point", "coordinate": [-81.4028, 28.539] },
+          "properties": { "role": "shelter", "status": "active" }
+        },
+        {
+          "type": "checkpoint",
+          "name": "I-4 North Access Control",
+          "placement": { "mode": "point", "coordinate": [-81.385, 28.59] },
+          "properties": { "role": "traffic_control", "status": "active" }
+        },
+        {
+          "type": "checkpoint",
+          "name": "I-4 South Access Control",
+          "placement": { "mode": "point", "coordinate": [-81.395, 28.49] },
+          "properties": { "role": "traffic_control", "status": "active" }
+        },
+        {
+          "type": "checkpoint",
+          "name": "Turnpike East Access Control",
+          "placement": { "mode": "point", "coordinate": [-81.3, 28.55] },
+          "properties": { "role": "traffic_control", "status": "planned" }
+        },
+        {
+          "type": "checkpoint",
+          "name": "Airport North Checkpoint",
+          "placement": { "mode": "point", "coordinate": [-81.324, 28.462] },
+          "properties": { "role": "traffic_control", "status": "active" }
+        }
+      ]
+    },
+    {
+      "id": "search_and_rescue",
+      "name": "Search and Rescue",
+      "order": 6,
+      "objective": "Grid the impact zone for coordinated search and rescue.",
+      "metadata": {
+        "source_type": "modeled",
+        "confidence": "medium",
+        "assumptions": [
+          "Search-grid cell size assumes 1.4 km SAR sweep sectors.",
+          "Grid is capped to 200 cells for planning clarity."
+        ]
+      },
+      "layers": [
+        {
+          "type": "search_area",
+          "name": "Urban Search Grid",
+          "operation": "hex_grid",
+          "parameters": {
+            "bounds": [-81.46, 28.47, -81.29, 28.61],
+            "radius_m": 1400,
+            "max_features": 200
+          },
+          "style": {
+            "fill_color": "#e2e8f0",
+            "fill_opacity": 0.07,
+            "stroke_color": "#64748b",
+            "stroke_width": 1
+          }
+        },
+        {
+          "type": "observation_zone",
+          "name": "SAR Priority Sector West",
+          "operation": "sector",
+          "parameters": {
+            "center": [-81.3792, 28.5383],
+            "radius_km": 9,
+            "start_bearing": 200,
+            "end_bearing": 260,
+            "steps": 30
+          },
+          "style": {
+            "fill_color": "#a855f7",
+            "fill_opacity": 0.16,
+            "stroke_color": "#7e22ce"
+          }
+        }
+      ]
+    }
+  ]
+}

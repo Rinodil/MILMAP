@@ -1,0 +1,381 @@
+{
+  "scenario_name": "orlando_shtf_civil_emergency",
+  "map_context": {
+    "mode": "civil_emergency_demo",
+    "center": [-81.3792, 28.5383],
+    "zoom": 10
+  },
+  "metadata": {
+    "scenario_type": "civil_emergency_stress_test",
+    "source": "OpenStreetMap via Overpass API plus deterministic generated overlays",
+    "osm_relation": 1128379,
+    "osm_wikidata": "Q49233",
+    "safety_note": "This scenario models civilian disaster response logistics, not combat operations."
+  },
+  "objects": [
+    {
+      "type": "base",
+      "name": "Downtown Emergency Operations Center",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.3792, 28.5383]
+      },
+      "properties": {
+        "role": "coordination",
+        "status": "active"
+      }
+    },
+    {
+      "type": "supply_node",
+      "name": "Water Distribution North",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.3693, 28.5732]
+      },
+      "properties": {
+        "resource": "water",
+        "status": "active"
+      }
+    },
+    {
+      "type": "supply_node",
+      "name": "Food Distribution West",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.4029, 28.5392]
+      },
+      "properties": {
+        "resource": "food",
+        "status": "active"
+      }
+    },
+    {
+      "type": "supply_node",
+      "name": "Relief Staging East",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.2001, 28.6024]
+      },
+      "properties": {
+        "resource": "staging",
+        "status": "planned"
+      }
+    },
+    {
+      "type": "objective_marker",
+      "name": "Airport Air Bridge",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.3089, 28.4312]
+      },
+      "properties": {
+        "role": "air_logistics",
+        "status": "active"
+      }
+    },
+    {
+      "type": "checkpoint",
+      "name": "I-4 North Access Control",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.385, 28.59]
+      },
+      "properties": {
+        "role": "traffic_control",
+        "status": "active"
+      }
+    },
+    {
+      "type": "checkpoint",
+      "name": "I-4 South Access Control",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.395, 28.49]
+      },
+      "properties": {
+        "role": "traffic_control",
+        "status": "active"
+      }
+    },
+    {
+      "type": "checkpoint",
+      "name": "Airport North Checkpoint",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.324, 28.462]
+      },
+      "properties": {
+        "role": "traffic_control",
+        "status": "planned"
+      }
+    },
+    {
+      "type": "outpost",
+      "name": "North Medical Triage",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.3693, 28.5732]
+      },
+      "properties": {
+        "role": "medical_triage",
+        "status": "active"
+      },
+      "style": {
+        "marker_color": "#dc2626",
+        "stroke_color": "#b91c1c"
+      }
+    },
+    {
+      "type": "outpost",
+      "name": "South Medical Triage",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.3807, 28.5264]
+      },
+      "properties": {
+        "role": "medical_triage",
+        "status": "active"
+      },
+      "style": {
+        "marker_color": "#dc2626",
+        "stroke_color": "#b91c1c"
+      }
+    },
+    {
+      "type": "annotation",
+      "name": "Downtown Comms Relay",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.378, 28.551]
+      },
+      "properties": {
+        "role": "communications",
+        "status": "degraded"
+      }
+    },
+    {
+      "type": "label",
+      "name": "Convention Center Shelter",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-81.4694, 28.4248]
+      },
+      "properties": {
+        "role": "shelter",
+        "status": "planned"
+      }
+    }
+  ],
+  "layers": [
+    {
+      "type": "region_boundary",
+      "name": "Orlando City Boundary",
+      "operation": "overpass_query",
+      "pipeline": "real_world",
+      "parameters": {
+        "query": "[out:json][timeout:90];rel[\"boundary\"=\"administrative\"][\"admin_level\"=\"8\"][\"wikidata\"=\"Q49233\"];out geom;"
+      },
+      "style": {
+        "stroke_color": "#111827",
+        "stroke_width": 3,
+        "fill_opacity": 0
+      }
+    },
+    {
+      "type": "perimeter",
+      "name": "EOC Primary Service Area",
+      "operation": "buffer",
+      "parameters": {
+        "center": [-81.3792, 28.5383],
+        "radius_km": 8,
+        "steps": 72
+      },
+      "style": {
+        "fill_color": "#2563eb",
+        "fill_opacity": 0.1,
+        "stroke_color": "#1d4ed8"
+      }
+    },
+    {
+      "type": "range_ring",
+      "name": "Regional Coordination Ring",
+      "operation": "range_ring",
+      "parameters": {
+        "center": [-81.3792, 28.5383],
+        "radius_km": 20,
+        "steps": 120
+      },
+      "style": {
+        "stroke_color": "#1d4ed8",
+        "stroke_width": 2,
+        "fill_opacity": 0
+      }
+    },
+    {
+      "type": "restricted_zone",
+      "name": "Downtown Power Outage Core",
+      "operation": "regular_polygon",
+      "parameters": {
+        "center": [-81.3792, 28.5383],
+        "radius_km": 3.2,
+        "sides": 8,
+        "rotation_deg": 22.5
+      },
+      "style": {
+        "fill_color": "#f97316",
+        "fill_opacity": 0.22,
+        "stroke_color": "#c2410c"
+      }
+    },
+    {
+      "type": "observation_zone",
+      "name": "North Debris Assessment Sector",
+      "operation": "sector",
+      "parameters": {
+        "center": [-81.3792, 28.5383],
+        "radius_km": 11,
+        "start_bearing": 315,
+        "end_bearing": 45,
+        "steps": 36
+      },
+      "style": {
+        "fill_color": "#eab308",
+        "fill_opacity": 0.18,
+        "stroke_color": "#a16207"
+      }
+    },
+    {
+      "type": "observation_zone",
+      "name": "South Flood Recon Sector",
+      "operation": "sector",
+      "parameters": {
+        "center": [-81.3792, 28.5383],
+        "radius_km": 14,
+        "start_bearing": 135,
+        "end_bearing": 215,
+        "steps": 36
+      },
+      "style": {
+        "fill_color": "#0ea5e9",
+        "fill_opacity": 0.14,
+        "stroke_color": "#0369a1"
+      }
+    },
+    {
+      "type": "search_area",
+      "name": "Urban Search Grid",
+      "operation": "hex_grid",
+      "parameters": {
+        "bounds": [-81.45, 28.47, -81.29, 28.61],
+        "radius_m": 1400,
+        "max_features": 160
+      },
+      "style": {
+        "fill_color": "#e2e8f0",
+        "fill_opacity": 0.07,
+        "stroke_color": "#64748b",
+        "stroke_width": 1
+      }
+    },
+    {
+      "type": "corridor",
+      "name": "Airport Logistics Corridor",
+      "operation": "corridor",
+      "parameters": {
+        "coordinates": [
+          [-81.3792, 28.5383],
+          [-81.357, 28.503],
+          [-81.331, 28.468],
+          [-81.3089, 28.4312]
+        ],
+        "width_m": 1400
+      },
+      "style": {
+        "fill_color": "#0ea5e9",
+        "fill_opacity": 0.2,
+        "stroke_color": "#0369a1"
+      }
+    },
+    {
+      "type": "corridor",
+      "name": "West Shelter Supply Corridor",
+      "operation": "corridor",
+      "parameters": {
+        "coordinates": [
+          [-81.3792, 28.5383],
+          [-81.391, 28.539],
+          [-81.4029, 28.5392]
+        ],
+        "width_m": 900
+      },
+      "style": {
+        "fill_color": "#16a34a",
+        "fill_opacity": 0.2,
+        "stroke_color": "#15803d"
+      }
+    },
+    {
+      "type": "corridor",
+      "name": "East Relief Staging Corridor",
+      "operation": "corridor",
+      "parameters": {
+        "coordinates": [
+          [-81.3792, 28.5383],
+          [-81.321, 28.566],
+          [-81.262, 28.586],
+          [-81.2001, 28.6024]
+        ],
+        "width_m": 1100
+      },
+      "style": {
+        "fill_color": "#22c55e",
+        "fill_opacity": 0.18,
+        "stroke_color": "#15803d"
+      }
+    },
+    {
+      "type": "restricted_zone",
+      "name": "Low Mobility Flood Pocket A",
+      "operation": "polygon",
+      "pipeline": "direct",
+      "parameters": {
+        "rings": [
+          [
+            [-81.407, 28.516],
+            [-81.386, 28.509],
+            [-81.373, 28.519],
+            [-81.386, 28.533],
+            [-81.406, 28.529]
+          ]
+        ]
+      },
+      "style": {
+        "fill_color": "#38bdf8",
+        "fill_opacity": 0.22,
+        "stroke_color": "#0284c7"
+      }
+    },
+    {
+      "type": "restricted_zone",
+      "name": "Low Mobility Flood Pocket B",
+      "operation": "polygon",
+      "pipeline": "direct",
+      "parameters": {
+        "rings": [
+          [
+            [-81.352, 28.563],
+            [-81.326, 28.558],
+            [-81.316, 28.575],
+            [-81.337, 28.589],
+            [-81.359, 28.579]
+          ]
+        ]
+      },
+      "style": {
+        "fill_color": "#38bdf8",
+        "fill_opacity": 0.2,
+        "stroke_color": "#0284c7"
+      }
+    }
+  ]
+}

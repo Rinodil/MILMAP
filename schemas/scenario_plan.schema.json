@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://milmap.local/schemas/scenario_plan.schema.json",
+  "title": "MILMAP ScenarioPlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scenario_name"],
+  "properties": {
+    "scenario_name": {
+      "type": "string"
+    },
+    "map_context": {
+      "type": "object"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scenarioObject"
+      }
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scenarioLayer"
+      }
+    }
+  },
+  "$defs": {
+    "scenarioObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "placement"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "base",
+            "outpost",
+            "checkpoint",
+            "route",
+            "corridor",
+            "search_area",
+            "perimeter",
+            "observation_zone",
+            "restricted_zone",
+            "supply_node",
+            "objective_marker",
+            "label",
+            "annotation",
+            "grid_cell",
+            "region_boundary"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "placement": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["point", "line", "polygon", "bbox", "geometry"]
+            }
+          },
+          "additionalProperties": true
+        },
+        "properties": {
+          "type": "object"
+        },
+        "style": {
+          "type": "object"
+        },
+        "visible": {
+          "type": "boolean"
+        }
+      }
+    },
+    "scenarioLayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": ["type"]
+        },
+        {
+          "required": ["operation"]
+        }
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pipeline": {
+          "type": "string",
+          "enum": ["abstract", "direct", "real_world"]
+        },
+        "operation": {
+          "type": "string",
+          "enum": [
+            "point",
+            "line",
+            "polygon",
+            "bbox",
+            "buffer",
+            "range_ring",
+            "sector",
+            "regular_polygon",
+            "corridor",
+            "square_grid",
+            "hex_grid",
+            "real_world_boundary",
+            "overpass_query",
+            "osrm_route"
+          ]
+        },
+        "parameters": {
+          "type": "object"
+        },
+        "properties": {
+          "type": "object"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "style": {
+          "type": "object"
+        },
+        "visible": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

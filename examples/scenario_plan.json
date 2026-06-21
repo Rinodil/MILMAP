@@ -1,0 +1,79 @@
+{
+  "scenario_name": "training_setup",
+  "map_context": {
+    "mode": "simulation",
+    "center": [-82.324, 27.845],
+    "zoom": 11
+  },
+  "objects": [
+    {
+      "type": "base",
+      "name": "Base Alpha",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-82.324, 27.845]
+      },
+      "properties": {
+        "role": "logistics",
+        "status": "active"
+      }
+    },
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint North",
+      "placement": {
+        "mode": "point",
+        "coordinate": [-82.342, 27.879]
+      },
+      "properties": {
+        "status": "planned"
+      }
+    }
+  ],
+  "layers": [
+    {
+      "type": "perimeter",
+      "name": "Base Alpha Perimeter",
+      "operation": "buffer",
+      "parameters": {
+        "center": [-82.324, 27.845],
+        "radius_km": 5,
+        "steps": 48
+      }
+    },
+    {
+      "type": "observation_zone",
+      "name": "Observation Sector East",
+      "operation": "sector",
+      "parameters": {
+        "center": [-82.324, 27.845],
+        "radius_m": 4200,
+        "start_bearing": 40,
+        "end_bearing": 120,
+        "steps": 24
+      }
+    },
+    {
+      "type": "corridor",
+      "name": "Supply Route",
+      "operation": "corridor",
+      "parameters": {
+        "coordinates": [
+          [-82.42, 27.91],
+          [-82.35, 27.88],
+          [-82.3, 27.83]
+        ],
+        "width_m": 750
+      }
+    },
+    {
+      "type": "hex_grid",
+      "name": "Search Grid",
+      "parameters": {
+        "bounds": [-82.5, 27.7, -82.1, 28.0],
+        "radius_m": 2000,
+        "max_features": 500
+      }
+    }
+  ]
+}

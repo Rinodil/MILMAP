@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://milmap.local/schemas/agent_plan.schema.json",
+  "title": "MILMAP SpatialPlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pipeline", "operation", "parameters"],
+  "properties": {
+    "pipeline": {
+      "type": "string",
+      "enum": ["abstract", "direct", "real_world"]
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "point",
+        "line",
+        "polygon",
+        "bbox",
+        "buffer",
+        "range_ring",
+        "sector",
+        "regular_polygon",
+        "corridor",
+        "square_grid",
+        "hex_grid",
+        "real_world_boundary",
+        "overpass_query",
+        "osrm_route"
+      ]
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "properties": {
+      "type": "object"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

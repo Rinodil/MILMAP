@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MILMAP</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="workspace-panel">
+        <header class="brand-row">
+          <div>
+            <h1>MILMAP</h1>
+            <p id="scenarioMeta">No scenario loaded</p>
+          </div>
+          <button class="icon-button" id="reloadSaved" type="button" title="Refresh saved scenarios">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </header>
+
+        <section class="panel-section saved-section">
+          <div class="section-header">
+            <h2>Scenarios</h2>
+            <button class="icon-button" id="newScenario" type="button" title="New scenario">
+              <i data-lucide="file-plus-2"></i>
+            </button>
+          </div>
+          <div id="savedList" class="saved-list"></div>
+        </section>
+
+        <section class="panel-section editor-section">
+          <div class="section-header">
+            <h2>Scenario JSON</h2>
+            <div class="button-row">
+              <button class="icon-button" id="importGeojson" type="button" title="Import GeoJSON">
+                <i data-lucide="upload"></i>
+              </button>
+              <button class="icon-button" id="exportGeojson" type="button" title="Export GeoJSON">
+                <i data-lucide="download"></i>
+              </button>
+            </div>
+          </div>
+          <textarea id="scenarioInput" spellcheck="false"></textarea>
+          <div class="action-grid">
+            <button id="executeScenario" type="button">
+              <i data-lucide="play"></i>
+              <span>Execute</span>
+            </button>
+            <button id="saveScenario" type="button">
+              <i data-lucide="save"></i>
+              <span>Save</span>
+            </button>
+          </div>
+          <input id="geojsonFile" type="file" accept="application/geo+json,application/json,.geojson,.json">
+        </section>
+      </aside>
+
+      <main class="map-shell">
+        <div id="map"></div>
+        <div id="basemapBadge" class="basemap-badge" title="">Basemap</div>
+        <section id="mapLegend" class="map-legend" aria-label="Map legend">
+          <div class="map-legend-header">
+            <h2>Legend</h2>
+            <span id="legendCount" class="count-pill">0</span>
+          </div>
+          <div id="legendItems" class="legend-items"></div>
+        </section>
+        <div id="statusBar" class="status-bar">Ready</div>
+      </main>
+
+      <aside class="inspector-panel">
+        <section class="panel-section">
+          <div class="section-header">
+            <h2>Layers</h2>
+            <span id="layerCount" class="count-pill">0</span>
+          </div>
+          <div id="layerList" class="item-list"></div>
+        </section>
+        <section class="panel-section">
+          <div class="section-header">
+            <h2>Objects</h2>
+            <span id="objectCount" class="count-pill">0</span>
+          </div>
+          <div id="objectList" class="item-list"></div>
+        </section>
+        <section class="panel-section qa-section">
+          <div class="section-header">
+            <h2>QA</h2>
+            <span id="qaStatus" class="count-pill">n/a</span>
+          </div>
+          <div id="qaReport" class="qa-report"></div>
+        </section>
+        <section class="panel-section">
+          <div class="section-header">
+            <h2>Inspector</h2>
+          </div>
+          <pre id="inspectorOutput">{}</pre>
+        </section>
+      </aside>
+    </div>
+
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

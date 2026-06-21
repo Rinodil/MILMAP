@@ -1,0 +1,33 @@
+[project]
+name = "milmap-engine"
+version = "0.1.0"
+description = "Deterministic GeoJSON spatial-agent engine for map lines, boundaries, grids, and shapes."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+api = [
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+  "pmtiles>=3.4"
+]
+dev = [
+  "pytest>=8.0"
+]
+
+[project.scripts]
+milmap-engine = "milmap_engine.cli:main"
+
+[tool.setuptools.package-data]
+milmap_engine = [
+  "static/*",
+  "static/basemaps/protomaps/*.json",
+  "static/basemaps/protomaps/fonts/*/*.pbf",
+  "static/basemaps/protomaps/sprites/v4/*.json",
+  "static/basemaps/protomaps/sprites/v4/*.png",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

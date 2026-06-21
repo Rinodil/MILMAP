@@ -1,0 +1,43 @@
+[
+  {
+    "pipeline": "abstract",
+    "operation": "buffer",
+    "parameters": {
+      "center": [-82.324, 27.845],
+      "radius_miles": 2,
+      "steps": 48
+    },
+    "properties": {
+      "name": "simulated-area"
+    }
+  },
+  {
+    "pipeline": "abstract",
+    "operation": "sector",
+    "parameters": {
+      "center": [-82.324, 27.845],
+      "radius_m": 4200,
+      "start_bearing": 40,
+      "end_bearing": 120,
+      "steps": 24
+    },
+    "properties": {
+      "name": "sector-alpha"
+    }
+  },
+  {
+    "pipeline": "abstract",
+    "operation": "corridor",
+    "parameters": {
+      "coordinates": [
+        [-82.42, 27.91],
+        [-82.35, 27.88],
+        [-82.30, 27.83]
+      ],
+      "width_m": 750
+    },
+    "properties": {
+      "name": "route-corridor"
+    }
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "pipeline": "abstract",
+  "operation": "corridor",
+  "parameters": {
+    "coordinates": [
+      [-82.42, 27.91],
+      [-82.35, 27.88],
+      [-82.30, 27.83]
+    ],
+    "width_m": 750
+  },
+  "properties": {
+    "name": "route-corridor"
+  }
+}
+
