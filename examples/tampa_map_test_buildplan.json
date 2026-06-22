@@ -1,0 +1,390 @@
+{
+  "scenario_name": "tampa_map_test",
+  "map_context": {
+    "mode": "civil_emergency",
+    "placement_profile": "civil_emergency",
+    "center": [-82.4572, 27.9506],
+    "zoom": 10,
+    "bounds": [-82.62, 27.82, -82.30, 28.08],
+    "basemap": "protomaps_light",
+    "feature_source_name": "offline Tampa test fixture",
+    "feature_collection": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "way",
+            "osm_id": 9001,
+            "name": "Tampa General Hospital",
+            "amenity": "hospital"
+          },
+          "geometry": { "type": "Point", "coordinates": [-82.4596, 27.9372] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "way",
+            "osm_id": 9002,
+            "name": "Raymond James Stadium",
+            "leisure": "stadium",
+            "access": "public"
+          },
+          "geometry": { "type": "Point", "coordinates": [-82.5033, 27.9759] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 9003,
+            "name": "Tampa Union Station",
+            "railway": "station",
+            "public_transport": "station",
+            "access": "public"
+          },
+          "geometry": { "type": "Point", "coordinates": [-82.4508, 27.9521] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "way",
+            "osm_id": 9004,
+            "name": "Tampa International Airport Logistics",
+            "landuse": "commercial",
+            "access": "public"
+          },
+          "geometry": { "type": "Point", "coordinates": [-82.5332, 27.9755] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 9005,
+            "name": "Downtown Civic Center",
+            "amenity": "townhall",
+            "office": "government"
+          },
+          "geometry": { "type": "Point", "coordinates": [-82.4572, 27.9506] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "way",
+            "osm_id": 9006,
+            "name": "Port Tampa Bay Supply Area",
+            "landuse": "industrial",
+            "access": "private"
+          },
+          "geometry": { "type": "Point", "coordinates": [-82.4443, 27.9432] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "way",
+            "osm_id": 9007,
+            "name": "Hillsborough River Flood Pocket",
+            "natural": "water",
+            "water": "river"
+          },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+              [-82.4720, 27.9580],
+              [-82.4550, 27.9600],
+              [-82.4460, 27.9500],
+              [-82.4540, 27.9390],
+              [-82.4730, 27.9440],
+              [-82.4720, 27.9580]
+            ]]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 9008,
+            "name": "North Tampa Communications Tower",
+            "man_made": "communications_tower"
+          },
+          "geometry": { "type": "Point", "coordinates": [-82.4650, 28.0290] }
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "scenario_type": "tampa_map_render_test",
+    "safety_note": "Non-operational civil-emergency render test for map placement, QA, screenshot, and Telegram delivery."
+  },
+  "validation_rules": {
+    "max_features": 4000
+  },
+  "phases": [
+    {
+      "id": "base_context",
+      "name": "Base Context",
+      "order": 1,
+      "objective": "Establish the Tampa operating extent for a map-render test.",
+      "metadata": {
+        "source_type": "user_provided",
+        "source_name": "Tampa test bounding box",
+        "confidence": "high",
+        "assumptions": [
+          "Bounds are a deterministic Tampa metro test extent.",
+          "Fixture map features are representative test anchors for rendering and placement QA."
+        ]
+      },
+      "layers": [
+        {
+          "id": "tampa_operating_extent",
+          "type": "region_boundary",
+          "name": "Tampa Operating Extent",
+          "operation": "bbox",
+          "pipeline": "direct",
+          "parameters": {
+            "bounds": [-82.62, 27.82, -82.30, 28.08]
+          },
+          "style": {
+            "stroke_color": "#334155",
+            "stroke_width": 2,
+            "fill_color": "#64748b",
+            "fill_opacity": 0.03
+          }
+        }
+      ]
+    },
+    {
+      "id": "command_and_support",
+      "name": "Command And Support",
+      "order": 2,
+      "objective": "Place civic command, reception, pickup, supply, and communications test anchors.",
+      "metadata": {
+        "source_type": "map_context",
+        "source_name": "offline Tampa test fixture",
+        "confidence": "medium",
+        "assumptions": [
+          "Smart placements are selected from fixture map-context candidates.",
+          "This is a QA/render test, not a real incident plan."
+        ]
+      },
+      "layers": [
+        {
+          "id": "downtown_service_area",
+          "type": "perimeter",
+          "name": "Downtown Service Area",
+          "operation": "buffer",
+          "parameters": {
+            "radius_km": 7,
+            "steps": 72
+          },
+          "metadata": {
+            "map_context_role": "civic_anchor",
+            "map_context_constraints": {
+              "near": [-82.4572, 27.9506],
+              "preferred_max_distance_m": 5000,
+              "target_parameter": "center",
+              "max_candidates": 6
+            },
+            "placement_rationale": "Center the service area on the highest-scored mapped civic anchor in downtown Tampa."
+          },
+          "style": {
+            "fill_color": "#2563eb",
+            "fill_opacity": 0.10,
+            "stroke_color": "#1d4ed8"
+          }
+        },
+        {
+          "id": "north_comms_ring",
+          "type": "range_ring",
+          "name": "North Communications Ring",
+          "operation": "range_ring",
+          "parameters": {
+            "radius_km": 9,
+            "steps": 96
+          },
+          "metadata": {
+            "map_context_role": "comms_relay_candidate",
+            "map_context_constraints": {
+              "near": [-82.4572, 27.9506],
+              "preferred_max_distance_m": 12000,
+              "target_parameter": "center",
+              "max_candidates": 6
+            },
+            "placement_rationale": "Place the communications coverage test ring on the strongest mapped relay candidate near Tampa."
+          },
+          "style": {
+            "stroke_color": "#7c3aed",
+            "stroke_width": 2,
+            "fill_opacity": 0
+          }
+        }
+      ],
+      "objects": [
+        {
+          "id": "civic_command_node",
+          "type": "base",
+          "name": "Civic Command Node",
+          "placement": { "mode": "point" },
+          "metadata": {
+            "map_context_role": "civic_anchor",
+            "map_context_constraints": {
+              "near": [-82.4572, 27.9506],
+              "preferred_max_distance_m": 5000,
+              "max_candidates": 6
+            },
+            "placement_rationale": "Select a mapped civic anchor near downtown Tampa for the command marker."
+          },
+          "properties": { "role": "coordination", "status": "test" }
+        },
+        {
+          "id": "medical_reception_site",
+          "type": "aid_station",
+          "name": "Medical Reception Site",
+          "placement": { "mode": "point" },
+          "metadata": {
+            "map_context_role": "reception_site",
+            "map_context_constraints": {
+              "near": [-82.4572, 27.9506],
+              "preferred_max_distance_m": 8000,
+              "required_tags": { "amenity": "hospital" },
+              "avoid_roles": ["avoidance_zone"],
+              "avoid_within_m": 300,
+              "max_candidates": 6
+            },
+            "placement_rationale": "Select a mapped hospital reception site near downtown Tampa and outside mapped avoidance geometry."
+          },
+          "properties": { "role": "medical", "status": "test" }
+        },
+        {
+          "id": "public_pickup_hub",
+          "type": "supply_node",
+          "name": "Public Pickup Hub",
+          "placement": { "mode": "point" },
+          "metadata": {
+            "map_context_role": "pickup_hub",
+            "map_context_constraints": {
+              "near": [-82.4572, 27.9506],
+              "preferred_max_distance_m": 12000,
+              "prefer_tags": { "access": ["public", "yes"] },
+              "exclude_tags": { "access": ["private", "no"] },
+              "avoid_roles": ["avoidance_zone"],
+              "avoid_within_m": 500,
+              "max_candidates": 6
+            },
+            "placement_rationale": "Select a public pickup hub near downtown Tampa while excluding private-access sites and avoiding flood geometry."
+          },
+          "properties": { "role": "pickup", "status": "test" }
+        },
+        {
+          "id": "airport_logistics_anchor",
+          "type": "objective_marker",
+          "name": "Airport Logistics Anchor",
+          "placement": { "mode": "point" },
+          "metadata": {
+            "map_context_role": "supply_node",
+            "map_context_constraints": {
+              "near": [-82.5332, 27.9755],
+              "preferred_max_distance_m": 6000,
+              "exclude_tags": { "access": ["private", "no"] },
+              "max_candidates": 6
+            },
+            "placement_rationale": "Select the best public logistics supply node near Tampa International Airport."
+          },
+          "properties": { "role": "logistics", "status": "test" }
+        }
+      ]
+    },
+    {
+      "id": "hazards_and_corridors",
+      "name": "Hazards And Corridors",
+      "order": 3,
+      "objective": "Render planning hazards, grids, and public-support corridors.",
+      "metadata": {
+        "source_type": "generated",
+        "source_name": "deterministic Tampa render test",
+        "confidence": "medium",
+        "assumptions": [
+          "Hazard shapes are simulated for visual QA.",
+          "Corridors are broad planning corridors, not turn-by-turn routes."
+        ]
+      },
+      "layers": [
+        {
+          "id": "hillsborough_river_flood_pocket",
+          "type": "restricted_zone",
+          "name": "Hillsborough River Flood Pocket",
+          "operation": "polygon",
+          "pipeline": "direct",
+          "parameters": {
+            "rings": [[
+              [-82.4720, 27.9580],
+              [-82.4550, 27.9600],
+              [-82.4460, 27.9500],
+              [-82.4540, 27.9390],
+              [-82.4730, 27.9440],
+              [-82.4720, 27.9580]
+            ]]
+          },
+          "style": {
+            "fill_color": "#38bdf8",
+            "fill_opacity": 0.22,
+            "stroke_color": "#0284c7"
+          }
+        },
+        {
+          "id": "bay_shore_wind_band",
+          "type": "observation_zone",
+          "name": "Bay Shore Wind Band",
+          "operation": "sector",
+          "parameters": {
+            "center": [-82.4572, 27.9506],
+            "radius_km": 14,
+            "start_bearing": 185,
+            "end_bearing": 290,
+            "steps": 48
+          },
+          "style": {
+            "fill_color": "#f97316",
+            "fill_opacity": 0.16,
+            "stroke_color": "#c2410c"
+          }
+        },
+        {
+          "id": "downtown_search_grid",
+          "type": "grid",
+          "name": "Downtown Search Grid",
+          "operation": "square_grid",
+          "parameters": {
+            "bounds": [-82.49, 27.925, -82.425, 27.975],
+            "cell_size_m": 1200,
+            "max_features": 200
+          },
+          "style": {
+            "stroke_color": "#64748b",
+            "stroke_width": 1,
+            "fill_opacity": 0.02
+          }
+        },
+        {
+          "id": "airport_relief_corridor",
+          "type": "corridor",
+          "name": "Airport Relief Corridor",
+          "operation": "corridor",
+          "parameters": {
+            "coordinates": [
+              [-82.4572, 27.9506],
+              [-82.4840, 27.9610],
+              [-82.5080, 27.9700],
+              [-82.5332, 27.9755]
+            ],
+            "width_m": 900
+          },
+          "style": {
+            "fill_color": "#0ea5e9",
+            "fill_opacity": 0.18,
+            "stroke_color": "#0369a1"
+          }
+        }
+      ]
+    }
+  ]
+}
