@@ -1,0 +1,495 @@
+{
+  "scenario_name": "israel_iran_lebanon_crisis_test",
+  "map_context": {
+    "mode": "civil_emergency",
+    "placement_profile": "civil_emergency",
+    "center": [39.5, 33.0],
+    "zoom": 5,
+    "bounds": [32.0, 29.0, 53.0, 36.8],
+    "basemap": "osm",
+    "feature_source_name": "offline regional crisis test fixture",
+    "feature_collection": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 910001,
+            "name": "Jerusalem Civic Coordination Center",
+            "amenity": "townhall",
+            "office": "government"
+          },
+          "geometry": { "type": "Point", "coordinates": [35.2137, 31.7683] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 910002,
+            "name": "Tel Aviv Central Rail Reception",
+            "railway": "station",
+            "public_transport": "station",
+            "access": "public"
+          },
+          "geometry": { "type": "Point", "coordinates": [34.7925, 32.0833] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "way",
+            "osm_id": 910003,
+            "name": "Haifa Public Logistics Port Area",
+            "landuse": "commercial",
+            "access": "public"
+          },
+          "geometry": { "type": "Point", "coordinates": [35.0016, 32.8200] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 910004,
+            "name": "Beirut Medical Reception Site",
+            "amenity": "hospital"
+          },
+          "geometry": { "type": "Point", "coordinates": [35.5018, 33.8938] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 910005,
+            "name": "Tripoli Public Pickup Hub",
+            "amenity": "bus_station",
+            "public_transport": "station",
+            "access": "public"
+          },
+          "geometry": { "type": "Point", "coordinates": [35.8497, 34.4367] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 910006,
+            "name": "Mount Lebanon Communications Relay",
+            "man_made": "communications_tower"
+          },
+          "geometry": { "type": "Point", "coordinates": [35.6931, 33.9450] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 910007,
+            "name": "Amman Regional Staging Center",
+            "amenity": "community_centre",
+            "access": "public"
+          },
+          "geometry": { "type": "Point", "coordinates": [35.9106, 31.9539] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 910008,
+            "name": "Larnaca Maritime Relief Staging Area",
+            "landuse": "commercial",
+            "access": "public"
+          },
+          "geometry": { "type": "Point", "coordinates": [33.6233, 34.9182] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 910009,
+            "name": "Tehran Civic Liaison Center",
+            "amenity": "townhall",
+            "office": "government"
+          },
+          "geometry": { "type": "Point", "coordinates": [51.3890, 35.6892] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "node",
+            "osm_id": 910010,
+            "name": "Tabriz Medical Reception Site",
+            "amenity": "hospital"
+          },
+          "geometry": { "type": "Point", "coordinates": [46.2919, 38.0962] }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "osm_type": "way",
+            "osm_id": 910011,
+            "name": "Eastern Mediterranean Water Avoidance Area",
+            "natural": "water",
+            "water": "sea"
+          },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+              [32.0, 31.0],
+              [34.45, 31.0],
+              [34.45, 36.8],
+              [32.0, 36.8],
+              [32.0, 31.0]
+            ]]
+          }
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "scenario_type": "regional_crisis_capability_test",
+    "safety_note": "Simulated non-operational humanitarian and resilience test. Not intelligence, not targeting, and not an operational conflict plan."
+  },
+  "validation_rules": {
+    "max_features": 5000,
+    "route_quality": {
+      "enabled": true,
+      "max_corridor_width_m": 80000,
+      "max_segment_m": 1200000
+    }
+  },
+  "phases": [
+    {
+      "id": "base_context",
+      "name": "Base Context",
+      "order": 1,
+      "objective": "Establish the regional non-operational crisis test extent.",
+      "metadata": {
+        "source_type": "user_provided",
+        "source_name": "Regional test bounding box",
+        "confidence": "high",
+        "assumptions": [
+          "The extent is a deterministic regional test area.",
+          "Fixture features are representative public/civilian anchors for testing placement, QA, legend, and briefing handoff."
+        ]
+      },
+      "layers": [
+        {
+          "id": "regional_crisis_test_extent",
+          "type": "region_boundary",
+          "name": "Regional Crisis Test Extent",
+          "operation": "bbox",
+          "pipeline": "direct",
+          "parameters": {
+            "bounds": [32.0, 29.0, 53.0, 36.8]
+          },
+          "style": {
+            "stroke_color": "#334155",
+            "stroke_width": 2,
+            "fill_color": "#64748b",
+            "fill_opacity": 0.03
+          }
+        }
+      ]
+    },
+    {
+      "id": "civilian_support_network",
+      "name": "Civilian Support Network",
+      "order": 2,
+      "objective": "Place public coordination, reception, pickup, logistics, communications, and staging anchors.",
+      "metadata": {
+        "source_type": "map_context",
+        "source_name": "offline regional crisis test fixture",
+        "confidence": "medium",
+        "assumptions": [
+          "Smart placements are selected from public/civilian fixture candidates.",
+          "This is a capability test for humanitarian and resilience planning graphics only."
+        ]
+      },
+      "layers": [
+        {
+          "id": "jerusalem_coordination_area",
+          "type": "perimeter",
+          "name": "Jerusalem Coordination Area",
+          "operation": "buffer",
+          "parameters": {
+            "radius_km": 45,
+            "steps": 96
+          },
+          "metadata": {
+            "map_context_role": "civic_anchor",
+            "map_context_constraints": {
+              "near": [35.2137, 31.7683],
+              "preferred_max_distance_m": 60000,
+              "target_parameter": "center",
+              "max_candidates": 8
+            },
+            "placement_rationale": "Center the coordination area on the highest-scored public civic anchor near Jerusalem."
+          },
+          "style": {
+            "fill_color": "#2563eb",
+            "fill_opacity": 0.10,
+            "stroke_color": "#1d4ed8"
+          }
+        },
+        {
+          "id": "mount_lebanon_comms_ring",
+          "type": "range_ring",
+          "name": "Mount Lebanon Communications Ring",
+          "operation": "range_ring",
+          "parameters": {
+            "radius_km": 85,
+            "steps": 120
+          },
+          "metadata": {
+            "map_context_role": "comms_relay_candidate",
+            "map_context_constraints": {
+              "near": [35.6931, 33.9450],
+              "preferred_max_distance_m": 90000,
+              "target_parameter": "center",
+              "max_candidates": 8
+            },
+            "placement_rationale": "Place a communications coverage test ring on a mapped civilian relay candidate in Mount Lebanon."
+          },
+          "style": {
+            "stroke_color": "#7c3aed",
+            "stroke_width": 2,
+            "fill_opacity": 0
+          }
+        }
+      ],
+      "objects": [
+        {
+          "id": "jerusalem_civic_coordination_node",
+          "type": "base",
+          "name": "Jerusalem Civic Coordination Node",
+          "placement": { "mode": "point" },
+          "metadata": {
+            "map_context_role": "civic_anchor",
+            "map_context_constraints": {
+              "near": [35.2137, 31.7683],
+              "preferred_max_distance_m": 60000,
+              "max_candidates": 8
+            },
+            "placement_rationale": "Select a mapped public civic anchor near Jerusalem for the coordination marker."
+          },
+          "properties": { "role": "coordination", "status": "simulated" }
+        },
+        {
+          "id": "beirut_medical_reception_site",
+          "type": "aid_station",
+          "name": "Beirut Medical Reception Site",
+          "placement": { "mode": "point" },
+          "metadata": {
+            "map_context_role": "reception_site",
+            "map_context_constraints": {
+              "near": [35.5018, 33.8938],
+              "preferred_max_distance_m": 60000,
+              "required_tags": { "amenity": "hospital" },
+              "avoid_roles": ["avoidance_zone"],
+              "avoid_within_m": 1000,
+              "max_candidates": 8
+            },
+            "placement_rationale": "Select a mapped medical reception site near Beirut while avoiding water/industrial avoidance geometry."
+          },
+          "properties": { "role": "medical", "status": "simulated" }
+        },
+        {
+          "id": "tel_aviv_public_pickup_hub",
+          "type": "supply_node",
+          "name": "Tel Aviv Public Pickup Hub",
+          "placement": { "mode": "point" },
+          "metadata": {
+            "map_context_role": "pickup_hub",
+            "map_context_constraints": {
+              "near": [34.7925, 32.0833],
+              "preferred_max_distance_m": 80000,
+              "prefer_tags": { "access": ["public", "yes"] },
+              "exclude_tags": { "access": ["private", "no"] },
+              "avoid_roles": ["avoidance_zone"],
+              "avoid_within_m": 1000,
+              "max_candidates": 8
+            },
+            "placement_rationale": "Select a mapped public transport pickup hub near Tel Aviv while excluding private-access sites."
+          },
+          "properties": { "role": "pickup", "status": "simulated" }
+        },
+        {
+          "id": "haifa_logistics_anchor",
+          "type": "objective_marker",
+          "name": "Haifa Logistics Anchor",
+          "placement": { "mode": "point" },
+          "metadata": {
+            "map_context_role": "supply_node",
+            "map_context_constraints": {
+              "near": [35.0016, 32.8200],
+              "preferred_max_distance_m": 70000,
+              "prefer_tags": { "access": ["public", "yes"] },
+              "max_candidates": 8
+            },
+            "placement_rationale": "Select the best public logistics supply node near Haifa for non-operational relief planning."
+          },
+          "properties": { "role": "logistics", "status": "simulated" }
+        },
+        {
+          "id": "amman_regional_staging_node",
+          "type": "shelter",
+          "name": "Amman Regional Staging Node",
+          "placement": { "mode": "point" },
+          "metadata": {
+            "map_context_role": "shelter_candidate",
+            "map_context_constraints": {
+              "near": [35.9106, 31.9539],
+              "preferred_max_distance_m": 90000,
+              "prefer_tags": { "access": ["public", "yes"] },
+              "max_candidates": 8
+            },
+            "placement_rationale": "Select a public community shelter/staging candidate near Amman for regional support visualization."
+          },
+          "properties": { "role": "staging", "status": "simulated" }
+        },
+        {
+          "id": "tehran_civic_liaison_node",
+          "type": "base",
+          "name": "Tehran Civic Liaison Node",
+          "placement": { "mode": "point" },
+          "metadata": {
+            "map_context_role": "civic_anchor",
+            "map_context_constraints": {
+              "near": [51.3890, 35.6892],
+              "preferred_max_distance_m": 100000,
+              "max_candidates": 8
+            },
+            "placement_rationale": "Select a mapped civic liaison anchor near Tehran for regional civilian coordination visualization."
+          },
+          "properties": { "role": "liaison", "status": "simulated" }
+        }
+      ]
+    },
+    {
+      "id": "advisory_areas_and_corridors",
+      "name": "Advisory Areas And Corridors",
+      "order": 3,
+      "objective": "Render simulated civilian advisory areas, support grids, and non-kinetic relief corridors.",
+      "metadata": {
+        "source_type": "generated",
+        "source_name": "deterministic regional crisis test",
+        "confidence": "medium",
+        "assumptions": [
+          "Advisory areas are simulated and do not represent current intelligence.",
+          "Corridors are broad public-support graphics, not turn-by-turn routes or military movement plans."
+        ]
+      },
+      "layers": [
+        {
+          "id": "north_israel_south_lebanon_support_band",
+          "type": "observation_zone",
+          "name": "North Israel South Lebanon Support Band",
+          "operation": "polygon",
+          "pipeline": "direct",
+          "parameters": {
+            "rings": [[
+              [34.65, 32.75],
+              [36.75, 32.75],
+              [36.90, 34.45],
+              [34.85, 34.45],
+              [34.65, 32.75]
+            ]]
+          },
+          "style": {
+            "fill_color": "#f97316",
+            "fill_opacity": 0.16,
+            "stroke_color": "#c2410c"
+          }
+        },
+        {
+          "id": "central_israel_public_support_grid",
+          "type": "grid",
+          "name": "Central Israel Public Support Grid",
+          "operation": "square_grid",
+          "parameters": {
+            "bounds": [34.45, 31.45, 35.55, 32.55],
+            "cell_size_m": 25000,
+            "max_features": 200
+          },
+          "style": {
+            "stroke_color": "#64748b",
+            "stroke_width": 1,
+            "fill_opacity": 0.02
+          }
+        },
+        {
+          "id": "beirut_coastal_reception_area",
+          "type": "perimeter",
+          "name": "Beirut Coastal Reception Area",
+          "operation": "buffer",
+          "parameters": {
+            "center": [35.5018, 33.8938],
+            "radius_km": 35,
+            "steps": 80
+          },
+          "style": {
+            "fill_color": "#38bdf8",
+            "fill_opacity": 0.16,
+            "stroke_color": "#0284c7"
+          }
+        },
+        {
+          "id": "regional_aviation_disruption_advisory",
+          "type": "observation_zone",
+          "name": "Regional Aviation Disruption Advisory",
+          "operation": "sector",
+          "parameters": {
+            "center": [39.0, 33.2],
+            "radius_km": 1450,
+            "start_bearing": 245,
+            "end_bearing": 70,
+            "steps": 96
+          },
+          "style": {
+            "fill_color": "#eab308",
+            "fill_opacity": 0.10,
+            "stroke_color": "#a16207"
+          }
+        },
+        {
+          "id": "eastern_med_relief_sea_corridor",
+          "type": "corridor",
+          "name": "Eastern Med Relief Sea Corridor",
+          "operation": "corridor",
+          "parameters": {
+            "coordinates": [
+              [33.6233, 34.9182],
+              [34.15, 34.35],
+              [34.55, 33.65],
+              [35.0016, 32.8200]
+            ],
+            "width_m": 60000
+          },
+          "style": {
+            "fill_color": "#0ea5e9",
+            "fill_opacity": 0.18,
+            "stroke_color": "#0369a1"
+          }
+        },
+        {
+          "id": "jordan_valley_support_corridor",
+          "type": "corridor",
+          "name": "Jordan Valley Support Corridor",
+          "operation": "corridor",
+          "parameters": {
+            "coordinates": [
+              [35.9106, 31.9539],
+              [35.72, 31.95],
+              [35.45, 32.20],
+              [35.2137, 31.7683]
+            ],
+            "width_m": 45000
+          },
+          "style": {
+            "fill_color": "#22c55e",
+            "fill_opacity": 0.18,
+            "stroke_color": "#15803d"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -22,6 +22,8 @@ handoff that turns saved scenarios and map screenshots into simulated briefing
 graphics.
 See [State Of The Art Roadmap](docs/state_of_art_roadmap.md) for the
 implemented 1-6 capability focus and deferred 7-10 opportunity notes.
+See [End-To-End Capability Workflow](docs/end_to_end_capability_workflow.md)
+for the full build, QA, render, briefing, and Telegram delivery process.
 
 ## Pipelines
 
