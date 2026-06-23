@@ -18,6 +18,7 @@ dev = [
 
 [project.scripts]
 milmap-engine = "milmap_engine.cli:main"
+milmap-visual-briefing = "milmap_engine.visual_briefing:main"
 
 [tool.setuptools.package-data]
 milmap_engine = [

@@ -17,6 +17,9 @@ Natural language or structured request
 
 See [Full Agent Build Plan](docs/full_agent_build_plan.md) for the complete roadmap for turning this engine into a full map setup agent.
 See [Strategic Scenario Implementation Plan](docs/strategic_scenario_implementation_plan.md) for the staged layer-by-layer upgrade path.
+See [Visual Briefings](docs/visual_briefings.md) for the ChatGPT/OpenAI Images
+handoff that turns saved scenarios and map screenshots into simulated briefing
+graphics.
 
 ## Pipelines
 
@@ -94,6 +97,7 @@ GET saved scenarios from `/scenario`.
 GET a saved record from `/scenario/{scenario_id}`.
 GET saved GeoJSON from `/scenario/{scenario_id}/geojson`.
 GET a saved QA report from `/scenario/{scenario_id}/qa`.
+POST a visual briefing handoff package to `/scenario/{scenario_id}/visual_briefing`.
 GET the basemap registry from `/basemaps`.
 GET a self-hosted Florida vector tile from `/basemaps/florida/{z}/{x}/{y}.mvt`.
 GET a Protomaps flavor style from `/basemaps/protomaps/style/{flavor}.json`.

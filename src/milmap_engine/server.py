@@ -13,6 +13,7 @@ from .scenario import ScenarioAgent
 from .store import ScenarioStore
 from .tools import default_tool_registry
 from .validation import validate_scenario_payload
+from .visual_briefing import VisualBriefingError, create_visual_briefing_for_scenario
 
 try:
     from fastapi import FastAPI, HTTPException, Response
@@ -292,6 +293,31 @@ def create_app(store: ScenarioStore | None = None) -> Any:
         try:
             record = scenario_store.get(scenario_id)
             return record["payload"]["geojson"]
+        except (GeoJSONError, KeyError, TypeError, ValueError) as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post("/scenario/{scenario_id}/visual_briefing")
+    def create_visual_briefing(scenario_id: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        request = payload or {}
+        try:
+            return create_visual_briefing_for_scenario(
+                scenario_id,
+                store=scenario_store,
+                screenshot_path=request.get("screenshot_path"),
+                reference_images=request.get("reference_images") or [],
+                out_dir=request.get("out_dir"),
+                brief_type=str(request.get("brief_type") or "scenario_overview"),
+                audience=str(request.get("audience") or "government resilience, emergency management, and defense logistics stakeholders"),
+                visual_style=str(request.get("visual_style") or "polished emergency-management briefing graphic"),
+                model=str(request.get("model") or "gpt-image-2"),
+                size=str(request.get("size") or "1536x1024"),
+                quality=str(request.get("quality") or "high"),
+                output_format=str(request.get("output_format") or "png"),
+                generate=bool(request.get("generate", False)),
+                generated_image_path=request.get("generated_image_path"),
+            )
+        except VisualBriefingError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         except (GeoJSONError, KeyError, TypeError, ValueError) as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
