@@ -20,6 +20,7 @@ The package includes:
 
 - `visual_briefing_manifest.json`
 - `briefing_summary.json`
+- `briefing_report.md`
 - `prompt.txt`
 - `chatgpt_handoff.md`
 - copied reference images under `references/`
@@ -27,6 +28,11 @@ The package includes:
 The summary and prompt include the scenario QA status, 0-100 QA score, grade,
 readiness label, map context, and text legend so briefing graphics stay tied to
 the same auditable scenario source as the map.
+
+`briefing_report.md` is the human-readable packet for proposal, review, or
+handoff use. It includes QA readiness, map context, layer/object names, the
+plain-text legend, image-generation settings, references, and the required
+disclaimer.
 
 Every prompt includes the required disclaimer:
 

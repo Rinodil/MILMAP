@@ -176,10 +176,12 @@ def save_visual_briefing_package(
 
     manifest = root / "visual_briefing_manifest.json"
     summary_file = root / "briefing_summary.json"
+    report_file = root / "briefing_report.md"
     prompt_file = root / "prompt.txt"
     handoff_file = root / "chatgpt_handoff.md"
     manifest.write_text(json.dumps(package, indent=2, sort_keys=True), encoding="utf-8")
     summary_file.write_text(json.dumps(_briefing_summary(package), indent=2, sort_keys=True), encoding="utf-8")
+    report_file.write_text(_briefing_report_markdown(package), encoding="utf-8")
     prompt_file.write_text(package["prompt"] + "\n", encoding="utf-8")
     handoff_file.write_text(_handoff_markdown(package), encoding="utf-8")
 
@@ -189,6 +191,7 @@ def save_visual_briefing_package(
         "directory": str(root),
         "manifest": str(manifest),
         "summary": str(summary_file),
+        "report": str(report_file),
         "prompt": str(prompt_file),
         "chatgpt_handoff": str(handoff_file),
         "reference_count": len(package.get("image_inputs", [])),
@@ -475,6 +478,94 @@ def _briefing_summary(package: dict[str, Any]) -> dict[str, Any]:
         "openai": package.get("openai"),
         "disclaimer": package.get("disclaimer"),
     }
+
+
+def _briefing_report_markdown(package: dict[str, Any]) -> str:
+    summary = package.get("scenario_summary", {})
+    if not isinstance(summary, dict):
+        summary = {}
+    qa_score = summary.get("qa_score")
+    qa_grade = summary.get("qa_grade") or "n/a"
+    qa_label = summary.get("qa_label") or "unknown"
+    legend = str(summary.get("legend_text") or "none")
+    layers = _markdown_list(summary.get("layer_names", []))
+    objects = _markdown_list(summary.get("object_names", []))
+    references = _markdown_references(package.get("image_inputs", []))
+    openai = package.get("openai", {}) if isinstance(package.get("openai"), dict) else {}
+    map_context = summary.get("map_context", {}) if isinstance(summary.get("map_context"), dict) else {}
+    return f"""# MILMAP Briefing Report
+
+Scenario: `{package.get('source_scenario_id')}`
+Name: {package.get('source_scenario_name')}
+Brief type: `{package.get('brief_type')}`
+Classification: `{package.get('classification')}`
+
+## QA Readiness
+
+- Status: `{summary.get('qa_status') or 'unknown'}`
+- Score: `{qa_score if qa_score is not None else 'n/a'}/100`
+- Grade: `{qa_grade}`
+- Readiness: `{qa_label}`
+- Warnings: `{summary.get('warning_count', 0)}`
+- Errors: `{summary.get('error_count', 0)}`
+
+## Map Context
+
+- Mode: `{map_context.get('mode') or 'n/a'}`
+- Purpose: `{map_context.get('purpose') or 'n/a'}`
+- Center: `{map_context.get('center') or 'n/a'}`
+- Bounds: `{map_context.get('bounds') or 'n/a'}`
+- Basemap: `{map_context.get('basemap') or 'n/a'}`
+
+## Layers
+
+{layers}
+
+## Objects
+
+{objects}
+
+## Text Legend
+
+```text
+{legend}
+```
+
+## Image Handoff
+
+- Model: `{openai.get('model') or DEFAULT_IMAGE_MODEL}`
+- Mode: `{openai.get('api_mode') or 'n/a'}`
+- Size: `{openai.get('size') or 'n/a'}`
+- Quality: `{openai.get('quality') or 'n/a'}`
+- Output format: `{openai.get('output_format') or 'n/a'}`
+
+## References
+
+{references}
+
+## Disclaimer
+
+{package.get('disclaimer')}
+"""
+
+
+def _markdown_list(values: Any) -> str:
+    if not isinstance(values, list) or not values:
+        return "- none"
+    return "\n".join(f"- {str(value)}" for value in values)
+
+
+def _markdown_references(values: Any) -> str:
+    if not isinstance(values, list) or not values:
+        return "- No image references packaged."
+    lines = []
+    for item in values:
+        if not isinstance(item, dict):
+            continue
+        path = item.get("packaged_path") or item.get("path") or "unknown"
+        role = item.get("role") or "reference"
+        lines.append(f"- `{path}` ({role})")
+    return "\n".join(lines) if lines else "- No image references packaged."
 
 
 def _sha256(path: Path) -> str:

@@ -72,12 +72,14 @@ class VisualBriefingTests(unittest.TestCase):
 
             manifest = Path(result["manifest"])
             summary = Path(result["summary"])
+            report = Path(result["report"])
             prompt = Path(result["prompt"])
             handoff = Path(result["chatgpt_handoff"])
             packaged_image = Path(result["package"]["image_inputs"][0]["packaged_path"])
 
             self.assertTrue(manifest.is_file())
             self.assertTrue(summary.is_file())
+            self.assertTrue(report.is_file())
             self.assertTrue(prompt.is_file())
             self.assertTrue(handoff.is_file())
             self.assertTrue(packaged_image.is_file())
@@ -87,6 +89,10 @@ class VisualBriefingTests(unittest.TestCase):
             summary_data = json.loads(summary.read_text(encoding="utf-8"))
             self.assertEqual(summary_data["type"], "BriefingSummary")
             self.assertIn("legend_text", summary_data)
+            report_text = report.read_text(encoding="utf-8")
+            self.assertIn("# MILMAP Briefing Report", report_text)
+            self.assertIn("## Text Legend", report_text)
+            self.assertIn("## QA Readiness", report_text)
 
     def test_create_visual_briefing_for_saved_scenario(self):
         with tempfile.TemporaryDirectory() as tmp:
