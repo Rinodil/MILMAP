@@ -90,6 +90,12 @@ def validate_scenario_payload(
     phase_reports = _phase_reports(layer_reports, object_reports, issues)
     warning_count = sum(1 for issue in issues if issue["severity"] == "warning")
     error_count = sum(1 for issue in issues if issue["severity"] == "error")
+    score = _qa_score(
+        issues,
+        layer_reports=layer_reports,
+        object_reports=object_reports,
+        feature_count=total_features,
+    )
 
     return {
         "status": "error" if error_count else "warning" if warning_count else "pass",
@@ -102,6 +108,7 @@ def validate_scenario_payload(
             "warning_count": warning_count,
             "error_count": error_count,
         },
+        "score": score,
         "issues": issues,
         "layers": layer_reports,
         "objects": object_reports,
@@ -198,8 +205,14 @@ def _validate_layer(
         "phase_name": metadata.get("phase_name"),
         "source_type": source_type or None,
         "source_name": metadata.get("source_name"),
+        "source_identifier": _source_identifier(metadata),
         "confidence": metadata.get("confidence"),
         "placement_rationale": metadata.get("placement_rationale"),
+        "candidate_score": _numeric_or_none(metadata.get("candidate_score")),
+        "evidence_count": len(metadata.get("evidence", [])) if isinstance(metadata.get("evidence"), list) else 0,
+        "rejected_alternative_count": len(metadata.get("rejected_alternatives", []))
+        if isinstance(metadata.get("rejected_alternatives"), list)
+        else 0,
         "warnings": list(metadata.get("warnings", [])) if isinstance(metadata.get("warnings"), list) else [],
         "feature_count": feature_count,
         "geometry_types": geometry_types,
@@ -312,8 +325,14 @@ def _validate_object(
         "phase_name": metadata.get("phase_name"),
         "source_type": metadata.get("source_type"),
         "source_name": metadata.get("source_name"),
+        "source_identifier": _source_identifier(metadata),
         "confidence": metadata.get("confidence"),
         "placement_rationale": metadata.get("placement_rationale"),
+        "candidate_score": _numeric_or_none(metadata.get("candidate_score")),
+        "evidence_count": len(metadata.get("evidence", [])) if isinstance(metadata.get("evidence"), list) else 0,
+        "rejected_alternative_count": len(metadata.get("rejected_alternatives", []))
+        if isinstance(metadata.get("rejected_alternatives"), list)
+        else 0,
         "status": item.get("properties", {}).get("status") if isinstance(item.get("properties"), dict) else None,
     }
 
@@ -478,6 +497,34 @@ def _has_source_identifier(metadata: dict[str, Any]) -> bool:
     return False
 
 
+def _source_identifier(metadata: dict[str, Any]) -> str | None:
+    if metadata.get("source_url"):
+        return str(metadata["source_url"])
+    if metadata.get("osm_id"):
+        prefix = str(metadata.get("osm_type") or "osm")
+        return f"{prefix}:{metadata['osm_id']}"
+    evidence = metadata.get("evidence")
+    if not isinstance(evidence, list):
+        return None
+    for item in evidence:
+        if not isinstance(item, dict):
+            continue
+        if item.get("source_url"):
+            return str(item["source_url"])
+        tags = item.get("tags")
+        if isinstance(tags, dict) and tags.get("osm_id"):
+            prefix = str(tags.get("osm_type") or "osm")
+            return f"{prefix}:{tags['osm_id']}"
+    return None
+
+
+def _numeric_or_none(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _check_duplicate_names(items: list[dict[str, Any]], role: str, issues: list[dict[str, Any]]) -> None:
     names = [str(item.get("name", "")).strip().lower() for item in items if str(item.get("name", "")).strip()]
     for name, count in Counter(names).items():
@@ -596,6 +643,141 @@ def _phase_reports(
             }
         )
     return reports
+
+
+def _qa_score(
+    issues: list[dict[str, Any]],
+    *,
+    layer_reports: list[dict[str, Any]],
+    object_reports: list[dict[str, Any]],
+    feature_count: int,
+) -> dict[str, Any]:
+    score = 100.0
+    deductions: list[dict[str, Any]] = []
+    signals: dict[str, Any] = {}
+
+    error_count = sum(1 for issue in issues if issue["severity"] == "error")
+    warning_count = sum(1 for issue in issues if issue["severity"] == "warning")
+    score = _deduct(score, deductions, "errors", error_count * 25.0, f"{error_count} blocking QA error(s).")
+    score = _deduct(score, deductions, "warnings", min(30.0, warning_count * 5.0), f"{warning_count} QA warning(s).")
+
+    if feature_count == 0:
+        score = _deduct(score, deductions, "empty_map", 20.0, "Scenario has no rendered features.")
+
+    elements = [*layer_reports, *object_reports]
+    placed = [item for item in elements if item.get("placement_rationale") or item.get("candidate_score") is not None]
+    evidence_backed = [item for item in placed if item.get("evidence_count") or item.get("source_identifier")]
+    scored = [item for item in placed if item.get("candidate_score") is not None]
+    low_confidence = [item for item in placed if str(item.get("confidence") or "").lower() == "low"]
+
+    signals["element_count"] = len(elements)
+    signals["placement_reasoned_count"] = len(placed)
+    signals["evidence_backed_count"] = len(evidence_backed)
+    signals["candidate_scored_count"] = len(scored)
+    signals["low_confidence_count"] = len(low_confidence)
+
+    if elements:
+        placement_coverage = len(placed) / len(elements)
+        evidence_coverage = len(evidence_backed) / len(elements)
+        score_coverage = len(scored) / len(elements)
+        signals["placement_reasoning_coverage"] = round(placement_coverage, 3)
+        signals["evidence_coverage"] = round(evidence_coverage, 3)
+        signals["candidate_score_coverage"] = round(score_coverage, 3)
+
+        if placement_coverage < 0.75:
+            score = _deduct(
+                score,
+                deductions,
+                "placement_reasoning_coverage",
+                (0.75 - placement_coverage) * 16.0,
+                f"{len(placed)} of {len(elements)} map elements have placement rationale or candidate scores.",
+            )
+        if evidence_coverage < 0.50:
+            score = _deduct(
+                score,
+                deductions,
+                "evidence_coverage",
+                (0.50 - evidence_coverage) * 16.0,
+                f"{len(evidence_backed)} of {len(elements)} map elements have source identifiers or evidence.",
+            )
+        if score_coverage < 0.50:
+            score = _deduct(
+                score,
+                deductions,
+                "candidate_score_coverage",
+                (0.50 - score_coverage) * 10.0,
+                f"{len(scored)} of {len(elements)} map elements expose candidate scores.",
+            )
+
+    if scored:
+        average_candidate_score = sum(float(item["candidate_score"]) for item in scored) / len(scored)
+        signals["average_candidate_score"] = round(average_candidate_score, 3)
+        if average_candidate_score < 40.0:
+            score = _deduct(
+                score,
+                deductions,
+                "average_candidate_score",
+                (40.0 - average_candidate_score) * 0.35,
+                f"Average placement candidate score is {average_candidate_score:.1f}.",
+            )
+
+    if low_confidence:
+        score = _deduct(
+            score,
+            deductions,
+            "low_confidence_placements",
+            min(12.0, len(low_confidence) * 4.0),
+            f"{len(low_confidence)} placement(s) are low confidence.",
+        )
+
+    value = max(0, min(100, int(round(score))))
+    return {
+        "value": value,
+        "grade": _qa_grade(value),
+        "label": _qa_label(value, error_count=error_count),
+        "deductions": deductions,
+        "signals": signals,
+    }
+
+
+def _deduct(
+    score: float,
+    deductions: list[dict[str, Any]],
+    code: str,
+    points: float,
+    reason: str,
+) -> float:
+    if points <= 0:
+        return score
+    amount = round(points, 3)
+    deductions.append({"code": code, "points": amount, "reason": reason})
+    return score - amount
+
+
+def _qa_grade(value: int) -> str:
+    if value >= 95:
+        return "A+"
+    if value >= 90:
+        return "A"
+    if value >= 80:
+        return "B"
+    if value >= 70:
+        return "C"
+    if value >= 60:
+        return "D"
+    return "F"
+
+
+def _qa_label(value: int, *, error_count: int) -> str:
+    if error_count:
+        return "blocked"
+    if value >= 90:
+        return "briefing_ready"
+    if value >= 75:
+        return "review_recommended"
+    if value >= 60:
+        return "needs_cleanup"
+    return "not_ready"
 
 
 def _scenario_bounds(payload: dict[str, Any]) -> list[float] | None:

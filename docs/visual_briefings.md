@@ -10,7 +10,7 @@ planning visuals.
 ```text
 saved scenario
 -> rendered map screenshot
--> scenario/layer/object summary
+-> scenario/layer/object summary, legend text, and QA score
 -> reference-image package
 -> ChatGPT Images or OpenAI Images API
 -> generated briefing graphic
@@ -19,9 +19,14 @@ saved scenario
 The package includes:
 
 - `visual_briefing_manifest.json`
+- `briefing_summary.json`
 - `prompt.txt`
 - `chatgpt_handoff.md`
 - copied reference images under `references/`
+
+The summary and prompt include the scenario QA status, 0-100 QA score, grade,
+readiness label, map context, and text legend so briefing graphics stay tied to
+the same auditable scenario source as the map.
 
 Every prompt includes the required disclaimer:
 

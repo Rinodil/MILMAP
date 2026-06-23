@@ -121,6 +121,8 @@ def build_visual_prompt(
     objects = ", ".join(summary.get("object_names", [])[:10]) or "none"
     legend = summary.get("legend_text") or "none"
     qa = summary.get("qa_status") or "unknown"
+    qa_score = summary.get("qa_score")
+    qa_grade = summary.get("qa_grade") or "n/a"
     context = summary.get("map_context", {})
     center = context.get("center")
     bounds = context.get("bounds")
@@ -131,6 +133,7 @@ def build_visual_prompt(
             f"Briefing type: {brief_type}.",
             f"Scenario: {summary.get('scenario_name')} ({summary.get('scenario_id')}).",
             f"QA status: {qa}; warnings: {summary.get('warning_count')}; errors: {summary.get('error_count')}.",
+            f"QA score: {qa_score if qa_score is not None else 'n/a'}/100 ({qa_grade}); readiness: {summary.get('qa_label') or 'unknown'}.",
             f"Map center: {center}; bounds: {bounds}.",
             f"Layers to preserve visually: {layers}.",
             f"Objects to preserve visually: {objects}.",
@@ -172,9 +175,11 @@ def save_visual_briefing_package(
         package["image_inputs"] = copied_inputs
 
     manifest = root / "visual_briefing_manifest.json"
+    summary_file = root / "briefing_summary.json"
     prompt_file = root / "prompt.txt"
     handoff_file = root / "chatgpt_handoff.md"
     manifest.write_text(json.dumps(package, indent=2, sort_keys=True), encoding="utf-8")
+    summary_file.write_text(json.dumps(_briefing_summary(package), indent=2, sort_keys=True), encoding="utf-8")
     prompt_file.write_text(package["prompt"] + "\n", encoding="utf-8")
     handoff_file.write_text(_handoff_markdown(package), encoding="utf-8")
 
@@ -183,6 +188,7 @@ def save_visual_briefing_package(
         "package_id": package["package_id"],
         "directory": str(root),
         "manifest": str(manifest),
+        "summary": str(summary_file),
         "prompt": str(prompt_file),
         "chatgpt_handoff": str(handoff_file),
         "reference_count": len(package.get("image_inputs", [])),
@@ -268,6 +274,7 @@ def _scenario_summary(payload: dict[str, Any]) -> dict[str, Any]:
     objects = [item for item in payload.get("objects", []) if isinstance(item, dict)]
     qa = payload.get("qa") if isinstance(payload.get("qa"), dict) else {}
     qa_summary = qa.get("summary", {}) if isinstance(qa.get("summary"), dict) else {}
+    qa_score = qa.get("score", {}) if isinstance(qa.get("score"), dict) else {}
     map_context = payload.get("map_context") if isinstance(payload.get("map_context"), dict) else {}
     return {
         "scenario_id": payload.get("scenario_id"),
@@ -276,6 +283,9 @@ def _scenario_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "object_count": len(objects),
         "feature_count": qa_summary.get("feature_count", _feature_count(payload.get("geojson"))),
         "qa_status": qa.get("status"),
+        "qa_score": qa_score.get("value"),
+        "qa_grade": qa_score.get("grade"),
+        "qa_label": qa_score.get("label"),
         "warning_count": qa_summary.get("warning_count", 0),
         "error_count": qa_summary.get("error_count", 0),
         "layer_names": [str(item.get("name") or item.get("id") or item.get("type")) for item in layers],
@@ -438,6 +448,33 @@ Classification: `{package.get('classification')}`
 
 {package.get('disclaimer')}
 """
+
+
+def _briefing_summary(package: dict[str, Any]) -> dict[str, Any]:
+    summary = package.get("scenario_summary", {})
+    if not isinstance(summary, dict):
+        summary = {}
+    return {
+        "type": "BriefingSummary",
+        "package_id": package.get("package_id"),
+        "scenario_id": package.get("source_scenario_id"),
+        "scenario_name": package.get("source_scenario_name"),
+        "brief_type": package.get("brief_type"),
+        "classification": package.get("classification"),
+        "qa": {
+            "status": summary.get("qa_status"),
+            "score": summary.get("qa_score"),
+            "grade": summary.get("qa_grade"),
+            "label": summary.get("qa_label"),
+            "warnings": summary.get("warning_count"),
+            "errors": summary.get("error_count"),
+        },
+        "map_context": summary.get("map_context"),
+        "legend_text": summary.get("legend_text"),
+        "reference_count": len(package.get("image_inputs", [])),
+        "openai": package.get("openai"),
+        "disclaimer": package.get("disclaimer"),
+    }
 
 
 def _sha256(path: Path) -> str:

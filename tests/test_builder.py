@@ -304,6 +304,52 @@ class ScenarioValidationTests(unittest.TestCase):
         self.assertIn("empty_layer", codes)
         self.assertIn("missing_real_world_source", codes)
         self.assertIn("object_out_of_bounds", codes)
+        self.assertLess(qa["score"]["value"], 90)
+        self.assertEqual(qa["score"]["label"], "not_ready")
+        self.assertIn("deductions", qa["score"])
+
+    def test_validation_score_rewards_evidence_backed_placements(self):
+        qa = validate_scenario_payload(
+            {
+                "type": "Scenario",
+                "scenario_id": "score_fixture",
+                "scenario_name": "Score Fixture",
+                "map_context": {"bounds": [-1.0, -1.0, 1.0, 1.0]},
+                "layers": [],
+                "objects": [
+                    {
+                        "id": "support_node",
+                        "type": "base",
+                        "name": "Support Node",
+                        "style": {"marker_color": "#2563eb"},
+                        "metadata": {
+                            "placement_rationale": "Selected highest-scored civic support site.",
+                            "candidate_score": 82,
+                            "confidence": "high",
+                            "evidence": [{"name": "Civic Center", "source_url": "https://example.test/civic"}],
+                            "rejected_alternatives": [{"name": "Alternate Site"}],
+                        },
+                        "properties": {},
+                        "geometry": {"type": "Point", "coordinates": [0.0, 0.0]},
+                    }
+                ],
+                "geojson": {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "properties": {},
+                            "geometry": {"type": "Point", "coordinates": [0.0, 0.0]},
+                        }
+                    ],
+                },
+            }
+        )
+
+        self.assertEqual(qa["status"], "pass")
+        self.assertEqual(qa["score"]["label"], "briefing_ready")
+        self.assertGreaterEqual(qa["score"]["value"], 95)
+        self.assertEqual(qa["score"]["signals"]["evidence_backed_count"], 1)
 
 
 @unittest.skipIf(TestClient is None, "FastAPI test client is not installed.")

@@ -819,9 +819,11 @@ function renderQaPanel(qa) {
   }
 
   const summary = qa.summary || {};
+  const score = qa.score || {};
   const metrics = document.createElement("div");
   metrics.className = "qa-metrics";
   metrics.append(
+    qaMetric("Score", score.value != null ? `${score.value} ${score.grade || ""}`.trim() : "n/a"),
     qaMetric("Warnings", summary.warning_count || 0),
     qaMetric("Errors", summary.error_count || 0),
     qaMetric("Features", summary.feature_count || 0),

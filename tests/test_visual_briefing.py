@@ -58,6 +58,7 @@ class VisualBriefingTests(unittest.TestCase):
         self.assertEqual(package["openai"]["api_mode"], "image_generation")
         self.assertIn("not a targeting product", package["disclaimer"])
         self.assertIn("Do not depict weapon targeting", package["prompt"])
+        self.assertIn("QA score:", package["prompt"])
         self.assertIn("Service Area", package["prompt"])
         self.assertIn("Command Node", package["prompt"])
 
@@ -70,17 +71,22 @@ class VisualBriefingTests(unittest.TestCase):
             result = save_visual_briefing_package(package, tmp_path / "briefing")
 
             manifest = Path(result["manifest"])
+            summary = Path(result["summary"])
             prompt = Path(result["prompt"])
             handoff = Path(result["chatgpt_handoff"])
             packaged_image = Path(result["package"]["image_inputs"][0]["packaged_path"])
 
             self.assertTrue(manifest.is_file())
+            self.assertTrue(summary.is_file())
             self.assertTrue(prompt.is_file())
             self.assertTrue(handoff.is_file())
             self.assertTrue(packaged_image.is_file())
             self.assertEqual(result["reference_count"], 1)
             manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
             self.assertEqual(manifest_data["openai"]["api_mode"], "image_edit_with_references")
+            summary_data = json.loads(summary.read_text(encoding="utf-8"))
+            self.assertEqual(summary_data["type"], "BriefingSummary")
+            self.assertIn("legend_text", summary_data)
 
     def test_create_visual_briefing_for_saved_scenario(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -20,6 +20,8 @@ See [Strategic Scenario Implementation Plan](docs/strategic_scenario_implementat
 See [Visual Briefings](docs/visual_briefings.md) for the ChatGPT/OpenAI Images
 handoff that turns saved scenarios and map screenshots into simulated briefing
 graphics.
+See [State Of The Art Roadmap](docs/state_of_art_roadmap.md) for the
+implemented 1-6 capability focus and deferred 7-10 opportunity notes.
 
 ## Pipelines
 
@@ -66,7 +68,8 @@ Staged scenario builds sit above `ScenarioPlan`. A caller submits a
 `ScenarioBrief` or ordered `LayerBuildPlan`; the builder executes phases in
 order, attaches phase/source metadata to layers and objects, saves phase
 snapshots when a store is configured, and returns a QA report with the final
-scenario payload.
+scenario payload. QA reports include a 0-100 score, grade, readiness label, and
+deduction reasons for briefing and review workflows.
 
 The Orlando real-world demo uses OpenStreetMap data through Overpass for the
 Orlando, Florida administrative boundary:
