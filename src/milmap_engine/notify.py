@@ -44,6 +44,9 @@ import urllib.request
 import uuid
 from pathlib import Path
 
+from .legend import scenario_legend_text
+from .store import ScenarioStore
+
 # --- Hardcoded, project-dedicated Telegram configuration ---------------------
 # Override any of these via environment variables without touching the code.
 TELEGRAM_BOT_TOKEN = os.environ.get(
@@ -113,6 +116,8 @@ def build_url(
     server: str = DEFAULT_SERVER,
     scenario: str | None = None,
     basemap: str | None = None,
+    presentation: bool = False,
+    show_legend: bool = True,
 ) -> str:
     """Build the workspace URL, optionally deep-linking a scenario/basemap."""
     base = server.rstrip("/") + "/"
@@ -121,6 +126,10 @@ def build_url(
         params["scenario"] = scenario
     if basemap:
         params["basemap"] = basemap
+    if presentation:
+        params["presentation"] = "1"
+    if not show_legend:
+        params["legend"] = "0"
     if params:
         return base + "?" + urllib.parse.urlencode(params)
     return base
@@ -302,6 +311,8 @@ def notify_screenshot(
     server: str = DEFAULT_SERVER,
     scenario: str | None = None,
     basemap: str | None = None,
+    presentation: bool = False,
+    show_legend: bool = True,
     caption: str | None = None,
     out_path: str | os.PathLike[str] | None = None,
     width: int = 1366,
@@ -309,7 +320,7 @@ def notify_screenshot(
     wait_ms: int = 12000,
 ) -> dict:
     """Capture the workspace (optionally a scenario) and send it to Telegram."""
-    url = build_url(server, scenario, basemap)
+    url = build_url(server, scenario, basemap, presentation=presentation, show_legend=show_legend)
     if out_path is None:
         suffix = f"-{scenario}" if scenario else ""
         out_path = Path(tempfile.gettempdir()) / f"milmap{suffix}.png"
@@ -319,11 +330,23 @@ def notify_screenshot(
 
 
 def _build_caption(args: argparse.Namespace) -> str | None:
-    if args.caption:
-        return args.caption
-    if args.scenario:
-        return f"MILMAP screenshot - {args.scenario} ({time.strftime('%Y-%m-%d %H:%M')})"
-    return None
+    caption = args.caption
+    if not caption and args.scenario:
+        caption = f"MILMAP screenshot - {args.scenario} ({time.strftime('%Y-%m-%d %H:%M')})"
+    if args.legend_text and args.scenario:
+        legend = _legend_text_for_caption(args.scenario, max_entries=args.legend_max)
+        if legend:
+            caption = (caption or "") + "\n\nLegend:\n" + legend
+    return caption or None
+
+
+def _legend_text_for_caption(scenario_id: str, *, max_entries: int) -> str:
+    try:
+        record = ScenarioStore().get(scenario_id)
+    except Exception:
+        return ""
+    payload = record.get("payload", {})
+    return scenario_legend_text(payload, max_entries=max_entries)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -331,6 +354,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--server", default=DEFAULT_SERVER, help="Base URL of the running workspace.")
     parser.add_argument("--scenario", help="Saved scenario id to deep-link (?scenario=<id>).")
     parser.add_argument("--basemap", help="Force a basemap id (?basemap=<id>), e.g. cartodb_dark.")
+    parser.add_argument("--presentation", action="store_true", help="Hide side panels for a clean map screenshot.")
+    parser.add_argument("--hide-legend", action="store_true", help="Hide the on-map legend in screenshots.")
+    parser.add_argument("--legend-text", action="store_true", help="Append a text legend to the Telegram caption.")
+    parser.add_argument("--legend-max", type=int, default=12, help="Maximum legend entries to append to caption.")
     parser.add_argument("--url", help="Explicit URL to screenshot (overrides --server/--scenario).")
     parser.add_argument("--caption", help="Telegram caption text.")
     parser.add_argument("--out", help="Where to write the PNG (default: temp dir).")
@@ -340,7 +367,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-send", action="store_true", help="Capture only; skip Telegram delivery.")
     args = parser.parse_args(argv)
 
-    url = args.url or build_url(args.server, args.scenario, args.basemap)
+    url = args.url or build_url(
+        args.server,
+        args.scenario,
+        args.basemap,
+        presentation=args.presentation,
+        show_legend=not args.hide_legend,
+    )
     out = args.out or (
         Path(tempfile.gettempdir()) / f"milmap{('-' + args.scenario) if args.scenario else ''}.png"
     )

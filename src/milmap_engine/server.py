@@ -7,6 +7,7 @@ from typing import Any
 from .agent import SpatialAgent
 from .builder import ScenarioBuilder
 from .geojson import GeoJSONError
+from .legend import scenario_legend_entries, scenario_legend_text
 from .models import ScenarioPlan
 from .refinement import ScenarioRefiner
 from .scenario import ScenarioAgent
@@ -293,6 +294,19 @@ def create_app(store: ScenarioStore | None = None) -> Any:
         try:
             record = scenario_store.get(scenario_id)
             return record["payload"]["geojson"]
+        except (GeoJSONError, KeyError, TypeError, ValueError) as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.get("/scenario/{scenario_id}/legend")
+    def get_scenario_legend(scenario_id: str) -> dict[str, Any]:
+        try:
+            record = scenario_store.get(scenario_id)
+            payload = record["payload"]
+            return {
+                "scenario_id": payload.get("scenario_id", scenario_id),
+                "entries": scenario_legend_entries(payload),
+                "text": scenario_legend_text(payload),
+            }
         except (GeoJSONError, KeyError, TypeError, ValueError) as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 

@@ -337,6 +337,42 @@ button svg {
   box-shadow: var(--shadow);
 }
 
+body.presentation-mode .app-shell {
+  grid-template-columns: 1fr;
+}
+
+body.presentation-mode .workspace-panel,
+body.presentation-mode .inspector-panel {
+  display: none;
+}
+
+body.presentation-mode .map-shell {
+  width: 100vw;
+  height: 100vh;
+}
+
+body.presentation-mode .map-legend {
+  right: 18px;
+  bottom: 52px;
+  width: min(360px, calc(100% - 36px));
+  max-height: min(52vh, 480px);
+}
+
+body.presentation-mode .basemap-badge {
+  left: 18px;
+  top: 18px;
+  max-width: min(520px, calc(100% - 36px));
+}
+
+body.presentation-mode .status-bar {
+  left: 18px;
+  bottom: 18px;
+}
+
+body.hide-map-legend .map-legend {
+  display: none;
+}
+
 .map-legend-header {
   display: flex;
   align-items: center;

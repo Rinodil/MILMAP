@@ -120,6 +120,7 @@ const els = {};
 
 document.addEventListener("DOMContentLoaded", () => {
   cacheElements();
+  applyUrlModes();
   hydrateIcons();
   els.scenarioInput.value = JSON.stringify(DEFAULT_PLAN, null, 2);
   bindActions();
@@ -127,6 +128,16 @@ document.addEventListener("DOMContentLoaded", () => {
   initMap();
   loadSavedScenarios();
 });
+
+function applyUrlModes() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("presentation") === "1" || params.get("clean") === "1") {
+    document.body.classList.add("presentation-mode");
+  }
+  if (params.get("legend") === "0") {
+    document.body.classList.add("hide-map-legend");
+  }
+}
 
 function cacheElements() {
   for (const id of [

@@ -14,6 +14,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from .legend import scenario_legend_text
 from .store import ScenarioStore
 
 
@@ -118,6 +119,7 @@ def build_visual_prompt(
     summary = summary or _scenario_summary(payload)
     layers = ", ".join(summary.get("layer_names", [])[:10]) or "none"
     objects = ", ".join(summary.get("object_names", [])[:10]) or "none"
+    legend = summary.get("legend_text") or "none"
     qa = summary.get("qa_status") or "unknown"
     context = summary.get("map_context", {})
     center = context.get("center")
@@ -132,6 +134,7 @@ def build_visual_prompt(
             f"Map center: {center}; bounds: {bounds}.",
             f"Layers to preserve visually: {layers}.",
             f"Objects to preserve visually: {objects}.",
+            f"Text legend to preserve: {legend}",
             "",
             "Use the provided MILMAP screenshot/reference images as the geographic and visual source of truth.",
             "Preserve relative placement, map orientation, labels, and the distinction between hazards, corridors, service areas, and support nodes.",
@@ -277,6 +280,7 @@ def _scenario_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "error_count": qa_summary.get("error_count", 0),
         "layer_names": [str(item.get("name") or item.get("id") or item.get("type")) for item in layers],
         "object_names": [str(item.get("name") or item.get("id") or item.get("type")) for item in objects],
+        "legend_text": scenario_legend_text(payload),
         "map_context": {
             "mode": map_context.get("mode"),
             "purpose": map_context.get("purpose"),

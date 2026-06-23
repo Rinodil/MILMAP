@@ -97,6 +97,7 @@ GET saved scenarios from `/scenario`.
 GET a saved record from `/scenario/{scenario_id}`.
 GET saved GeoJSON from `/scenario/{scenario_id}/geojson`.
 GET a saved QA report from `/scenario/{scenario_id}/qa`.
+GET a text/structured legend from `/scenario/{scenario_id}/legend`.
 POST a visual briefing handoff package to `/scenario/{scenario_id}/visual_briefing`.
 GET the basemap registry from `/basemaps`.
 GET a self-hosted Florida vector tile from `/basemaps/florida/{z}/{x}/{y}.mvt`.

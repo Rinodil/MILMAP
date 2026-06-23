@@ -52,6 +52,26 @@ Screenshot a saved scenario and send it:
   --caption "MILMAP - Orlando metro SHTF build, QA pass"
 ```
 
+Send a clean presentation screenshot with no side panels and append a text
+legend to the Telegram caption:
+
+```bash
+.venv/bin/python -m milmap_engine.notify \
+  --scenario lebanon_map_test \
+  --basemap osm \
+  --presentation \
+  --legend-text \
+  --caption "MILMAP - Lebanon map test, QA pass"
+```
+
+The caption legend uses plain text such as:
+
+```text
+blue line: Friendly Comms
+light blue area: Flood Pocket
+green point: Aid Node
+```
+
 Capture only (no Telegram delivery), e.g. for a local review:
 
 ```bash
@@ -71,6 +91,10 @@ Screenshot an arbitrary URL or the default workspace:
 | ------------ | ------------------------ | ------------------------------------------------ |
 | `--scenario` | —                        | Saved scenario id to deep-link.                  |
 | `--basemap`  | —                        | Force a basemap id (`?basemap=<id>`), e.g. `cartodb_dark`. |
+| `--presentation` | off                  | Hide side panels for clean map-only screenshots. |
+| `--hide-legend` | off                    | Hide the on-map legend. |
+| `--legend-text` | off                    | Append a text legend to the Telegram caption. |
+| `--legend-max` | `12`                    | Maximum text legend entries in the caption. |
 | `--server`   | `http://127.0.0.1:8004`  | Base URL of the running workspace.               |
 | `--url`      | —                        | Explicit URL (overrides `--server`/`--scenario`).|
 | `--caption`  | auto                     | Telegram caption text.                           |
