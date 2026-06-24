@@ -18,11 +18,24 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Also write a relationship/effects JSON file from the planned scenario.",
     )
+    parser.add_argument(
+        "--analysis",
+        action="store_true",
+        help="Also write a coverage/effects analysis JSON file from the planned scenario.",
+    )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Run planning, relationships, and coverage/effects analysis.",
+    )
     args = parser.parse_args(argv)
 
     scenario_file = Path(f"generated_{args.template}.json")
     planned_file = Path(f"generated_{args.template}_planned.json")
     relationships_file = Path(f"generated_{args.template}_planned_with_relationships.json")
+    analysis_file = Path(f"generated_{args.template}_planned_with_analysis.json")
+    include_relationships = args.relationships or args.full
+    include_analysis = args.analysis or args.full
 
     cmd = ["python3", "generate_scenario.py", "--template", args.template]
     if args.notify:
@@ -46,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
         check=True,
     )
 
-    if args.relationships:
+    if include_relationships:
         print("\n=== Step 3: Adding relationships and effects notes ===", flush=True)
         subprocess.run(
             [
@@ -60,6 +73,22 @@ def main(argv: list[str] | None = None) -> int:
             check=True,
         )
         print(f"\nFinal relationship file: {relationships_file}")
+
+    if include_analysis:
+        step_number = 4 if include_relationships else 3
+        print(f"\n=== Step {step_number}: Adding coverage and effects analysis ===", flush=True)
+        subprocess.run(
+            [
+                "python3",
+                "coverage_effects_helper.py",
+                "--input",
+                str(planned_file),
+                "--output",
+                str(analysis_file),
+            ],
+            check=True,
+        )
+        print(f"\nFinal analysis file: {analysis_file}")
 
     print("\n=== Done ===")
     print(f"Final planned file: {planned_file}")

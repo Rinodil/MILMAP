@@ -117,6 +117,13 @@ Add relationship/effects metadata as a third step when needed:
 python3 run_scenario.py --template eastern_mediterranean_advanced --relationships
 ```
 
+Add coverage/effects analysis, or run all planning helpers:
+
+```bash
+python3 run_scenario.py --template eastern_mediterranean_advanced --analysis
+python3 run_scenario.py --template eastern_mediterranean_advanced --full
+```
+
 Staged scenario builds sit above `ScenarioPlan`. A caller submits a
 `ScenarioBrief` or ordered `LayerBuildPlan`; the builder executes phases in
 order, attaches phase/source metadata to layers and objects, saves phase
