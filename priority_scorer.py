@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Assign priority scores to nodes in MILMAP scenario JSON files."""
+"""
+MILMAP Priority Scorer
+
+Assigns priority scores to nodes based on proximity to hubs and coverage zones.
+Supports manual overrides via scenario metadata.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +18,7 @@ EARTH_RADIUS_M = 6_371_008.8
 
 
 def haversine_m(coord1: list[float], coord2: list[float]) -> float:
+    """Calculate the great circle distance between two points in meters."""
     lon1, lat1 = map(math.radians, coord1)
     lon2, lat2 = map(math.radians, coord2)
     dlon = lon2 - lon1
@@ -26,6 +32,7 @@ def haversine_m(coord1: list[float], coord2: list[float]) -> float:
 
 
 def calculate_bearing(coord1: list[float], coord2: list[float]) -> float:
+    """Calculate the initial bearing from point 1 to point 2."""
     lon1, lat1 = map(math.radians, coord1)
     lon2, lat2 = map(math.radians, coord2)
     dlon = lon2 - lon1
@@ -42,6 +49,7 @@ def is_in_sector(
     start_bearing: float,
     end_bearing: float,
 ) -> bool:
+    """Determine if a point is within a circular sector."""
     dist = haversine_m(center, point)
     if dist > radius_m:
         return False
@@ -55,11 +63,106 @@ def is_in_sector(
 
 
 def load_scenario(path: str | Path) -> dict[str, Any]:
+    """Load scenario JSON from disk."""
     with Path(path).open("r", encoding="utf-8") as handle:
         return json.load(handle)
 
 
+def calculate_priority_score(
+    obj: dict[str, Any],
+    hubs: list[dict[str, Any]],
+    coverage_zones: list[dict[str, Any]]
+) -> tuple[float, list[str]]:
+    """Calculate a priority score (0-100) for a map object."""
+    score = 50.0
+    reasons = []
+
+    obj_type = str(obj.get("type", ""))
+    node_coord = _get_coordinate(obj)
+    if not node_coord:
+        return 0.0, ["No valid coordinate found"]
+
+    # Type-based scoring
+    if obj_type in {"high_value_target", "priority_node"}:
+        score += 20
+        reasons.append("High-value object type")
+
+    # Hub proximity (bonus for being close to a hub)
+    for hub in hubs:
+        hub_coord = _get_coordinate(hub)
+        if hub_coord:
+            dist = haversine_m(hub_coord, node_coord)
+            if dist < 10000:  # 10km
+                score += 15
+                reasons.append(f"Near hub {hub.get('name')} (<10km)")
+                break
+            elif dist < 50000:  # 50km
+                score += 5
+                reasons.append(f"Near hub {hub.get('name')} (<50km)")
+                break
+
+    # Coverage overlap (bonus for being inside a coverage area)
+    for zone in coverage_zones:
+        in_zone = False
+        if (
+            zone["operation"] == "sector"
+            and zone["start_bearing"] is not None
+            and zone["end_bearing"] is not None
+        ):
+            if is_in_sector(
+                node_coord,
+                zone["center"],
+                zone["radius_m"],
+                float(zone["start_bearing"]),
+                float(zone["end_bearing"]),
+            ):
+                in_zone = True
+        else:
+            if haversine_m(zone["center"], node_coord) <= zone["radius_m"]:
+                in_zone = True
+
+        if in_zone:
+            score += 15
+            reasons.append(f"Inside coverage zone {zone['name']}")
+            break
+
+    # Manual overrides in metadata
+    obj_metadata = obj.setdefault("metadata", {})
+    manual_priority = obj_metadata.get("priority_level")
+    if manual_priority == "high":
+        score = max(score, 85.0)
+        reasons.append("Manual override: High priority")
+    elif manual_priority == "medium":
+        score = max(score, 65.0)
+    elif manual_priority == "low":
+        score = min(score, 40.0)
+        reasons.append("Manual override: Low priority")
+
+    final_score = min(max(score, 0.0), 100.0)
+    return round(final_score, 1), reasons
+
+
+def _get_coordinate(element: dict[str, Any]) -> list[float] | None:
+    """Extract a [lon, lat] coordinate from an object or layer."""
+    # Check placement field first
+    placement = element.get("placement")
+    if isinstance(placement, dict) and placement.get("mode") == "point":
+        coord = placement.get("coordinate")
+        if isinstance(coord, list) and len(coord) >= 2:
+            return [float(coord[0]), float(coord[1])]
+
+    # Fallback to GeoJSON geometry
+    geometry = element.get("geometry")
+    if isinstance(geometry, dict) and geometry.get("type") == "Point":
+        coord = geometry.get("coordinates")
+        if isinstance(coord, list) and len(coord) >= 2:
+            return [float(coord[0]), float(coord[1])]
+
+    return None
+
+
 def score_priority(scenario: dict[str, Any]) -> dict[str, Any]:
+    """Analyze and score all priority nodes in the scenario."""
     objects = scenario.get("objects", [])
     layers = scenario.get("layers", [])
 
@@ -73,7 +176,7 @@ def score_priority(scenario: dict[str, Any]) -> dict[str, Any]:
                 if isinstance(layer.get("plan"), dict)
                 else {}
             )
-            if params:
+            if params and params.get("center"):
                 radius_km = params.get("radius_km")
                 radius = params.get("radius")
                 radius_m = 0.0
@@ -105,100 +208,21 @@ def score_priority(scenario: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(obj, dict):
             continue
 
-        node_coord = None
-        placement = obj.get("placement")
-        if isinstance(placement, dict) and placement.get("mode") == "point":
-            node_coord = placement.get("coordinate")
+        score, reasons = calculate_priority_score(obj, hubs, coverage_zones)
 
-        if not node_coord:
-            geometry = obj.get("geometry")
-            if isinstance(geometry, dict) and geometry.get("type") == "Point":
-                node_coord = geometry.get("coordinates")
-
-        if not node_coord or not isinstance(node_coord, list) or len(node_coord) < 2:
+        # We only record analysis for nodes that have a valid position
+        if reasons and reasons[0] == "No valid coordinate found":
             continue
 
-        score = 50.0
-        reasons = []
-
-        # Type-based scoring
-        obj_type = str(obj.get("type", ""))
-        if obj_type in {"high_value_target", "priority_node"}:
-            score += 20
-            reasons.append("High-value object type")
-
-        # Hub proximity
-        for hub in hubs:
-            hub_coord = None
-            hub_placement = hub.get("placement")
-            if isinstance(hub_placement, dict) and hub_placement.get("mode") == "point":
-                hub_coord = hub_placement.get("coordinate")
-
-            if not hub_coord:
-                hub_geometry = hub.get("geometry")
-                if isinstance(hub_geometry, dict) and hub_geometry.get("type") == "Point":
-                    hub_coord = hub_geometry.get("coordinates")
-
-            if hub_coord and isinstance(hub_coord, list) and len(hub_coord) >= 2:
-                dist = haversine_m(hub_coord, node_coord)
-                if dist < 10000:  # 10km
-                    score += 15
-                    reasons.append(f"Near hub {hub.get('name')} (<10km)")
-                    break
-                elif dist < 50000:  # 50km
-                    score += 5
-                    reasons.append(f"Near hub {hub.get('name')} (<50km)")
-                    break
-
-        # Coverage overlap
-        for zone in coverage_zones:
-            if not zone["center"] or not isinstance(zone["center"], list) or len(zone["center"]) < 2:
-                continue
-
-            in_zone = False
-            if (
-                zone["operation"] == "sector"
-                and zone["start_bearing"] is not None
-                and zone["end_bearing"] is not None
-            ):
-                if is_in_sector(
-                    node_coord,
-                    zone["center"],
-                    zone["radius_m"],
-                    float(zone["start_bearing"]),
-                    float(zone["end_bearing"]),
-                ):
-                    in_zone = True
-            else:
-                if haversine_m(zone["center"], node_coord) <= zone["radius_m"]:
-                    in_zone = True
-
-            if in_zone:
-                score += 15
-                reasons.append(f"Inside coverage zone {zone['name']}")
-                break
-
-        # Manual overrides in metadata
         obj_metadata = obj.setdefault("metadata", {})
-        manual_priority = obj_metadata.get("priority_level")
-        if manual_priority == "high":
-            score = max(score, 85.0)
-            reasons.append("Manual override: High priority")
-        elif manual_priority == "medium":
-            score = max(score, 65.0)
-        elif manual_priority == "low":
-            score = min(score, 40.0)
-            reasons.append("Manual override: Low priority")
-
-        score = min(max(score, 0), 100)
-        obj_metadata["priority_score"] = round(score, 1)
+        obj_metadata["priority_score"] = score
         obj_metadata["priority_reasons"] = reasons
 
         priority_analysis.append(
             {
                 "name": obj.get("name"),
-                "type": obj_type,
-                "score": obj_metadata["priority_score"],
+                "type": obj.get("type"),
+                "score": score,
                 "reasons": reasons,
             }
         )
@@ -216,27 +240,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--analysis-output", help="Priority analysis JSON output.")
     args = parser.parse_args(argv)
 
-    scenario = load_scenario(args.input)
-    enhanced = score_priority(scenario)
+    scenario = score_priority(load_scenario(args.input))
 
     output_path = (
         Path(args.output)
         if args.output
         else Path(args.input).parent / f"{Path(args.input).stem}_scored{Path(args.input).suffix}"
     )
-    output_path.write_text(
-        json.dumps(enhanced, indent=2, sort_keys=True), encoding="utf-8"
-    )
+    output_path.write_text(json.dumps(scenario, indent=2, sort_keys=True), encoding="utf-8")
 
     analysis_path = (
         Path(args.analysis_output)
         if args.analysis_output
         else Path(args.input).parent / "priority_analysis.json"
     )
-    analysis_data = enhanced["metadata"]["priority_analysis"]
-    analysis_path.write_text(
-        json.dumps(analysis_data, indent=2, sort_keys=True), encoding="utf-8"
-    )
+    analysis_data = scenario["metadata"]["priority_analysis"]
+    analysis_path.write_text(json.dumps(analysis_data, indent=2, sort_keys=True), encoding="utf-8")
 
     print(f"Scored scenario saved to: {output_path}")
     print(f"Priority analysis saved to: {analysis_path}")
