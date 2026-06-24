@@ -203,6 +203,8 @@ TEMPLATES: dict[str, dict[str, Any]] = {
             "center": [35.0, 33.5],
             "zoom": 7,
             "purpose": "advanced_operational_planning",
+            "basemap": "opentopomap",
+            "basemap_purpose": "topographic",
         },
         "layers": [
             {
