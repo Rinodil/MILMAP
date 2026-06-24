@@ -12,6 +12,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from milmap_engine import ScenarioAgent, ScenarioPlan, ScenarioStore
+from milmap_engine.legend import scenario_legend_entries
 from milmap_engine.notify import NotifyError, notify_screenshot
 from milmap_engine.validation import validate_scenario_payload
 
@@ -311,6 +312,10 @@ def main(argv: list[str] | None = None) -> int:
         help="Output JSON path. Defaults to generated_<template>.json.",
     )
     parser.add_argument(
+        "--legend-output",
+        help="Legend JSON path. Defaults to <output_stem>_legend.json.",
+    )
+    parser.add_argument(
         "--notify",
         action="store_true",
         help="Save the scenario and send a Telegram screenshot of the running workspace.",
@@ -340,11 +345,29 @@ def main(argv: list[str] | None = None) -> int:
     output_file.write_text(json.dumps(result.payload, indent=2, sort_keys=True), encoding="utf-8")
     print(f"Result saved to: {output_file}")
 
+    legend_payload = {
+        "scenario_id": result.payload.get("scenario_id"),
+        "scenario_name": result.payload.get("scenario_name"),
+        "entries": scenario_legend_entries(result.payload),
+    }
+    legend_file = (
+        Path(args.legend_output)
+        if args.legend_output
+        else output_file.with_name(f"{output_file.stem}_legend.json")
+    )
+    legend_file.write_text(json.dumps(legend_payload, indent=2, sort_keys=True), encoding="utf-8")
+    print(f"Legend saved to: {legend_file}")
+
     if args.notify:
         record = ScenarioStore().save(plan, result.payload)
         caption = args.caption or f"{plan.scenario_name} | QA {score['value']}/100 {score['grade']}"
         try:
-            notify_args = {"scenario": record["id"], "caption": caption}
+            notify_args = {
+                "scenario": record["id"],
+                "caption": caption,
+                "presentation": True,
+                "show_legend": False,
+            }
             if args.server:
                 notify_args["server"] = args.server
             notify_result = notify_screenshot(**notify_args)

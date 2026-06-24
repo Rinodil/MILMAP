@@ -81,9 +81,11 @@ python3 generate_scenario.py --template advanced_regional_scenario
 ```
 
 This writes `generated_regional_coordination.json`, including the styled
-scenario payload, combined GeoJSON, and QA report. The advanced template writes
-`generated_advanced_regional_scenario.json`. The source scenario templates also
-ship under `examples/` and can be run through the package CLI:
+scenario payload, combined GeoJSON, and QA report, plus
+`generated_regional_coordination_legend.json` for the structured legend. The
+advanced template writes `generated_advanced_regional_scenario.json` and a
+matching `_legend.json` file. The source scenario templates also ship under
+`examples/` and can be run through the package CLI:
 
 ```bash
 PYTHONPATH=src python3 -m milmap_engine.cli examples/regional_coordination_scenario.json
@@ -98,7 +100,9 @@ python3 generate_scenario.py --template advanced_regional_scenario --notify
 ```
 
 `--notify` saves the generated scenario in the local scenario store and
-deep-links the running workspace before sending the screenshot.
+deep-links the running workspace before sending the screenshot. Screenshots use
+presentation mode and hide the on-map legend so side panels do not appear; use
+the generated `_legend.json` file for legend data.
 
 Staged scenario builds sit above `ScenarioPlan`. A caller submits a
 `ScenarioBrief` or ordered `LayerBuildPlan`; the builder executes phases in
