@@ -197,6 +197,107 @@ TEMPLATES: dict[str, dict[str, Any]] = {
             "planning_phase": "initial",
         },
     },
+    "eastern_mediterranean_advanced": {
+        "scenario_name": "Eastern Mediterranean Advanced Planning Scenario",
+        "map_context": {
+            "center": [35.0, 33.5],
+            "zoom": 7,
+            "purpose": "advanced_operational_planning",
+        },
+        "layers": [
+            {
+                "name": "Primary Coverage Zone",
+                "type": "threat_dome",
+                "operation": "sector",
+                "parameters": {
+                    "center": [35.5, 33.8],
+                    "radius_km": 110,
+                    "start_bearing": 170,
+                    "end_bearing": 280,
+                    "steps": 40,
+                },
+                "metadata": {
+                    "assumptions": ["Coverage is modeled as a deterministic sector for planning review."],
+                    "source_name": "Built-in eastern Mediterranean advanced template",
+                    "placement_rationale": "Centered on the main coordination hub to show primary coverage.",
+                    "candidate_score": 84,
+                    "confidence": "medium",
+                },
+            },
+            {
+                "name": "Main Approach Corridor",
+                "type": "strike_corridor",
+                "operation": "corridor",
+                "parameters": {
+                    "coordinates": [[35.8, 33.9], [35.2, 33.6], [34.8, 33.4]],
+                    "width_m": 12000,
+                },
+                "metadata": {
+                    "assumptions": ["Corridor width is illustrative and generated from the provided centerline."],
+                    "source_name": "Built-in eastern Mediterranean advanced template",
+                    "placement_rationale": "Links the inland and coastal priority nodes through the planning area.",
+                    "candidate_score": 82,
+                    "confidence": "medium",
+                },
+            },
+            {
+                "name": "Coastal Search Grid",
+                "type": "search_grid",
+                "operation": "square_grid",
+                "parameters": {
+                    "bounds": [34.5, 33.0, 36.0, 34.2],
+                    "cell_size_m": 8000,
+                    "max_features": 400,
+                },
+                "metadata": {
+                    "assumptions": ["Grid cells are generated at a fixed size inside the provided bounding box."],
+                    "source_name": "Built-in eastern Mediterranean advanced template",
+                    "placement_rationale": "Bounds cover the coastal planning area around the priority nodes.",
+                    "candidate_score": 84,
+                    "confidence": "medium",
+                },
+            },
+        ],
+        "objects": [
+            {
+                "name": "Main Coordination Hub",
+                "type": "base",
+                "placement": {"mode": "point", "coordinate": [35.5, 33.8]},
+                "metadata": {
+                    "source_name": "Built-in eastern Mediterranean advanced template",
+                    "placement_rationale": "Primary reference point for the generated coverage layer.",
+                    "candidate_score": 86,
+                    "confidence": "medium",
+                },
+            },
+            {
+                "name": "Priority Node - Coastal",
+                "type": "high_value_target",
+                "placement": {"mode": "point", "coordinate": [35.3, 33.6]},
+                "metadata": {
+                    "source_name": "Built-in eastern Mediterranean advanced template",
+                    "placement_rationale": "Coastal point used to demonstrate multi-node planning.",
+                    "candidate_score": 80,
+                    "confidence": "medium",
+                },
+            },
+            {
+                "name": "Priority Node - Inland",
+                "type": "high_value_target",
+                "placement": {"mode": "point", "coordinate": [35.8, 33.9]},
+                "metadata": {
+                    "source_name": "Built-in eastern Mediterranean advanced template",
+                    "placement_rationale": "Inland point used to demonstrate multi-node planning.",
+                    "candidate_score": 80,
+                    "confidence": "medium",
+                },
+            },
+        ],
+        "metadata": {
+            "scenario_type": "advanced_operational",
+            "planning_focus": "multi_node_coverage_and_access",
+        },
+    },
 }
 
 
