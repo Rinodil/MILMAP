@@ -2,8 +2,8 @@
 """
 MILMAP Phase Coordinator
 
-Organizes scenario layers and objects into planning phases.
-Phases can be customized via scenario metadata.
+Assigns layers and objects to planning phases.
+Phases can be customized via metadata.
 """
 
 from __future__ import annotations
@@ -28,63 +28,46 @@ def get_phases(scenario: dict[str, Any]) -> list[str]:
     return scenario.get("metadata", {}).get("planning_phases") or DEFAULT_PHASES
 
 
+def assign_to_phase(item: dict[str, Any], phases: list[str]) -> str:
+    """Determine which phase an item belongs to based on its type."""
+    item_type = str(item.get("type", ""))
+
+    if item_type in {"threat_dome", "coverage_zone", "hub", "base"}:
+        return phases[0] if len(phases) > 0 else "setup"
+    elif item_type in {"strike_corridor", "movement_corridor", "approach_corridor"}:
+        return phases[1] if len(phases) > 1 else "deployment"
+    else:
+        return phases[-1] if phases else "operations"
+
+
 def assign_phases(scenario: dict[str, Any]) -> dict[str, Any]:
-    """Organize scenario layers and objects into planning phases."""
+    """Assign all layers and objects in the scenario to planning phases."""
     phases = get_phases(scenario)
     metadata = scenario.setdefault("metadata", {})
 
-    # Initialize phase plan with requested phases
     phase_plan: dict[str, dict[str, list[str]]] = {
         phase: {"layers": [], "objects": []} for phase in phases
     }
 
-    # Fallback for elements that don't fit in the requested phases
-    # (though in this implementation we assume standard phases are present)
-    for phase in DEFAULT_PHASES:
-        if phase not in phase_plan:
-            phase_plan[phase] = {"layers": [], "objects": []}
-
-    # Layer assignment logic
     for layer in scenario.get("layers", []):
         if not isinstance(layer, dict):
             continue
+        phase = assign_to_phase(layer, phases)
+        if phase in phase_plan:
+            phase_plan[phase]["layers"].append(layer.get("name") or "unnamed_layer")
+        layer.setdefault("metadata", {})["phase_id"] = phase
 
-        layer_type = str(layer.get("type", ""))
-        layer_name = str(layer.get("name") or layer.get("id") or "unnamed_layer")
-
-        target_phase = "operations"
-        if layer_type in {"threat_dome", "coverage_zone"}:
-            target_phase = "setup"
-        elif layer_type in {"strike_corridor", "movement_corridor", "approach_corridor"}:
-            target_phase = "deployment"
-
-        # Ensure we assign to an existing phase in our plan
-        if target_phase not in phase_plan:
-            target_phase = phases[0] if phases else "setup"
-
-        phase_plan[target_phase]["layers"].append(layer_name)
-        layer.setdefault("metadata", {})["phase_id"] = target_phase
-
-    # Object assignment logic
     for obj in scenario.get("objects", []):
         if not isinstance(obj, dict):
             continue
-
-        obj_type = str(obj.get("type", ""))
-        obj_name = str(obj.get("name") or obj.get("id") or "unnamed_object")
-
-        target_phase = "operations"
-        if obj_type in {"hub", "base"}:
-            target_phase = "setup"
-
-        if target_phase not in phase_plan:
-            target_phase = phases[-1] if phases else "operations"
-
-        phase_plan[target_phase]["objects"].append(obj_name)
-        obj.setdefault("metadata", {})["phase_id"] = target_phase
+        phase = assign_to_phase(obj, phases)
+        if phase in phase_plan:
+            phase_plan[phase]["objects"].append(obj.get("name") or "unnamed_object")
+        obj.setdefault("metadata", {})["phase_id"] = phase
 
     metadata["phase_plan"] = phase_plan
     metadata["suggested_phases"] = phases
+
     return scenario
 
 
@@ -92,15 +75,15 @@ def process_file(input_path: str | Path, output_path: str | Path | None = None) 
     """Load, enhance, and save a scenario file with phase information."""
     scenario = assign_phases(load_scenario(input_path))
 
-    output = Path(output_path) if output_path else _default_output_path(Path(input_path))
+    output = (
+        Path(output_path)
+        if output_path
+        else Path(input_path).parent / f"{Path(input_path).stem}_phased{Path(input_path).suffix}"
+    )
     output.write_text(json.dumps(scenario, indent=2, sort_keys=True), encoding="utf-8")
 
     print(f"Phased scenario saved to: {output}")
     return scenario
-
-
-def _default_output_path(input_path: Path) -> Path:
-    return input_path.parent / f"{input_path.stem}_phased{input_path.suffix}"
 
 
 def main(argv: list[str] | None = None) -> int:
