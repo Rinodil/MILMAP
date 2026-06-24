@@ -24,18 +24,18 @@ def load_scenario(path: str | Path) -> dict[str, Any]:
 
 
 def get_phases(scenario: dict[str, Any]) -> list[str]:
-    """Get phase names from metadata or defaults."""
+    """Return custom phases if defined, otherwise use defaults."""
     return scenario.get("metadata", {}).get("planning_phases") or DEFAULT_PHASES
 
 
-def assign_to_phase(item: dict[str, Any], phases: list[str]) -> str:
-    """Determine which phase an item belongs to based on its type and current phases."""
+def assign_phase(item: dict[str, Any], phases: list[str]) -> str:
+    """Assign an item to a phase based on its type."""
     item_type = str(item.get("type", ""))
 
     if item_type in {"threat_dome", "coverage_zone", "hub", "base"}:
-        return phases[0] if len(phases) > 0 else "setup"
+        return phases[0] if phases else "setup"
     elif item_type in {"strike_corridor", "movement_corridor", "approach_corridor"}:
-        return phases[1] if len(phases) > 1 else (phases[0] if phases else "setup")
+        return phases[1] if len(phases) > 1 else (phases[0] if phases else "deployment")
     else:
         return phases[-1] if phases else "operations"
 
@@ -43,7 +43,9 @@ def assign_to_phase(item: dict[str, Any], phases: list[str]) -> str:
 def assign_phases(scenario: dict[str, Any]) -> dict[str, Any]:
     """Assign all layers and objects in the scenario to planning phases."""
     phases = get_phases(scenario)
-    metadata = scenario.setdefault("metadata", {})
+
+    if "metadata" not in scenario:
+        scenario["metadata"] = {}
 
     phase_plan: dict[str, dict[str, list[str]]] = {
         phase: {"layers": [], "objects": []} for phase in phases
@@ -52,7 +54,7 @@ def assign_phases(scenario: dict[str, Any]) -> dict[str, Any]:
     for layer in scenario.get("layers", []):
         if not isinstance(layer, dict):
             continue
-        phase = assign_to_phase(layer, phases)
+        phase = assign_phase(layer, phases)
         if phase in phase_plan:
             phase_plan[phase]["layers"].append(layer.get("name") or "unnamed_layer")
         layer.setdefault("metadata", {})["phase_id"] = phase
@@ -60,13 +62,13 @@ def assign_phases(scenario: dict[str, Any]) -> dict[str, Any]:
     for obj in scenario.get("objects", []):
         if not isinstance(obj, dict):
             continue
-        phase = assign_to_phase(obj, phases)
+        phase = assign_phase(obj, phases)
         if phase in phase_plan:
             phase_plan[phase]["objects"].append(obj.get("name") or "unnamed_object")
         obj.setdefault("metadata", {})["phase_id"] = phase
 
-    metadata["phase_plan"] = phase_plan
-    metadata["suggested_phases"] = phases
+    scenario["metadata"]["phase_plan"] = phase_plan
+    scenario["metadata"]["suggested_phases"] = phases
 
     return scenario
 
@@ -87,9 +89,9 @@ def process_file(input_path: str | Path, output_path: str | Path | None = None) 
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Organize MILMAP scenario into phases.")
-    parser.add_argument("--input", required=True, help="Input scenario JSON.")
-    parser.add_argument("--output", help="Output scenario JSON.")
+    parser = argparse.ArgumentParser(description="MILMAP Phase Coordinator")
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", default=None)
     args = parser.parse_args()
 
     process_file(args.input, args.output)
