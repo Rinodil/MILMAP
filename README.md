@@ -104,6 +104,19 @@ deep-links the running workspace before sending the screenshot. Screenshots use
 presentation mode and hide the on-map legend so side panels do not appear; use
 the generated `_legend.json` file for legend data.
 
+For a one-command VPS workflow, run the generator and planning coordinator
+together:
+
+```bash
+python3 run_scenario.py --template eastern_mediterranean_advanced --notify
+```
+
+Add relationship/effects metadata as a third step when needed:
+
+```bash
+python3 run_scenario.py --template eastern_mediterranean_advanced --relationships
+```
+
 Staged scenario builds sit above `ScenarioPlan`. A caller submits a
 `ScenarioBrief` or ordered `LayerBuildPlan`; the builder executes phases in
 order, attaches phase/source metadata to layers and objects, saves phase
