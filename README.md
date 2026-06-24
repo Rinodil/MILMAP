@@ -73,19 +73,28 @@ with one command:
 python3 generate_scenario.py --template regional_coordination
 ```
 
+An advanced template with a coverage sector, approach corridor, search grid,
+main hub, and priority node is also available:
+
+```bash
+python3 generate_scenario.py --template advanced_regional_scenario
+```
+
 This writes `generated_regional_coordination.json`, including the styled
-scenario payload, combined GeoJSON, and QA report. The source scenario template
-also ships as `examples/regional_coordination_scenario.json` and can be run
-through the package CLI:
+scenario payload, combined GeoJSON, and QA report. The advanced template writes
+`generated_advanced_regional_scenario.json`. The source scenario templates also
+ship under `examples/` and can be run through the package CLI:
 
 ```bash
 PYTHONPATH=src python3 -m milmap_engine.cli examples/regional_coordination_scenario.json
+PYTHONPATH=src python3 -m milmap_engine.cli examples/advanced_regional_scenario.json
 ```
 
 To also send a Telegram screenshot, start the web workspace first, then run:
 
 ```bash
 python3 generate_scenario.py --template regional_coordination --notify
+python3 generate_scenario.py --template advanced_regional_scenario --notify
 ```
 
 `--notify` saves the generated scenario in the local scenario store and

@@ -106,7 +106,97 @@ TEMPLATES: dict[str, dict[str, Any]] = {
             "scenario_type": "regional_coordination",
             "phase": "planning",
         },
-    }
+    },
+    "advanced_regional_scenario": {
+        "scenario_name": "Advanced Regional Planning Scenario",
+        "map_context": {
+            "center": [35.0, 33.5],
+            "zoom": 7,
+            "purpose": "advanced_operational_planning",
+        },
+        "layers": [
+            {
+                "name": "Primary Coverage Zone",
+                "type": "coverage_zone",
+                "operation": "sector",
+                "parameters": {
+                    "center": [35.5, 33.8],
+                    "radius_km": 120,
+                    "start_bearing": 180,
+                    "end_bearing": 270,
+                    "steps": 36,
+                },
+                "metadata": {
+                    "assumptions": ["Coverage is modeled as a deterministic sector for planning review."],
+                    "source_name": "Built-in advanced regional template",
+                    "placement_rationale": "Centered on the main operating hub to show the primary planning area.",
+                    "candidate_score": 84,
+                    "confidence": "medium",
+                },
+            },
+            {
+                "name": "Main Approach Corridor",
+                "type": "approach_corridor",
+                "operation": "corridor",
+                "parameters": {
+                    "coordinates": [[51.4, 35.7], [48.0, 34.5], [40.0, 34.0], [35.5, 33.8]],
+                    "width_m": 15000,
+                },
+                "metadata": {
+                    "assumptions": ["Corridor width is illustrative and generated from the provided centerline."],
+                    "source_name": "Built-in advanced regional template",
+                    "placement_rationale": "Links the regional approach line to the main operating hub.",
+                    "candidate_score": 82,
+                    "confidence": "medium",
+                },
+            },
+            {
+                "name": "Search Grid",
+                "type": "search_grid",
+                "operation": "square_grid",
+                "parameters": {
+                    "bounds": [35.0, 33.0, 36.5, 34.5],
+                    "cell_size_m": 10000,
+                    "max_features": 300,
+                },
+                "metadata": {
+                    "assumptions": ["Grid cells are generated at a fixed size inside the provided bounding box."],
+                    "source_name": "Built-in advanced regional template",
+                    "placement_rationale": "Bounds cover the primary area around the hub and priority node.",
+                    "candidate_score": 84,
+                    "confidence": "medium",
+                },
+            },
+        ],
+        "objects": [
+            {
+                "name": "Main Operating Hub",
+                "type": "hub",
+                "placement": {"mode": "point", "coordinate": [35.5, 33.8]},
+                "metadata": {
+                    "source_name": "Built-in advanced regional template",
+                    "placement_rationale": "Primary reference point for the generated planning layers.",
+                    "candidate_score": 86,
+                    "confidence": "medium",
+                },
+            },
+            {
+                "name": "Priority Node",
+                "type": "priority_node",
+                "placement": {"mode": "point", "coordinate": [35.5, 33.9]},
+                "metadata": {
+                    "source_name": "Built-in advanced regional template",
+                    "placement_rationale": "Placed near the main hub to demonstrate priority-node tracking.",
+                    "candidate_score": 80,
+                    "confidence": "medium",
+                },
+            },
+        ],
+        "metadata": {
+            "scenario_type": "advanced_operational",
+            "planning_phase": "initial",
+        },
+    },
 }
 
 
