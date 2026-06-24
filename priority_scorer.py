@@ -15,19 +15,17 @@ from pathlib import Path
 from typing import Any
 
 
-def haversine_m(coord1: list[float], coord2: list[float]) -> float:
+def haversine_m(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
     """Calculate the great circle distance between two points in meters."""
     R = 6371008.8
-    lon1, lat1 = map(math.radians, coord1)
-    lon2, lat2 = map(math.radians, coord2)
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
     a = (
-        math.sin(dlat / 2) ** 2
-        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     )
-    c = 2 * math.asin(math.sqrt(a))
-    return c * R
+    return 2 * R * math.asin(math.sqrt(a))
 
 
 def calculate_bearing(coord1: list[float], coord2: list[float]) -> float:
@@ -49,7 +47,7 @@ def is_in_sector(
     end_bearing: float,
 ) -> bool:
     """Determine if a point is within a circular sector."""
-    dist = haversine_m(center, point)
+    dist = haversine_m(point[0], point[1], center[0], center[1])
     if dist > radius_m:
         return False
 
@@ -61,20 +59,21 @@ def is_in_sector(
         return bearing >= start_bearing or bearing <= end_bearing
 
 
-def get_coordinate(obj: dict[str, Any]) -> list[float] | None:
-    """Extract [lon, lat] from different possible placement formats."""
-    placement = obj.get("placement")
+def get_coordinate(item: dict[str, Any]) -> list[float] | None:
+    """Safely extract [lon, lat] from different placement formats."""
+    placement = item.get("placement")
     if isinstance(placement, dict):
-        coord = placement.get("coordinate")
-        if isinstance(coord, list) and len(coord) >= 2:
-            return [float(coord[0]), float(coord[1])]
+        if "coordinate" in placement:
+            return placement["coordinate"]
+        if placement.get("mode") == "point" and "coordinate" in placement:
+            return placement["coordinate"]
 
     # Fallback to GeoJSON geometry
-    geometry = obj.get("geometry")
+    geometry = item.get("geometry")
     if isinstance(geometry, dict) and geometry.get("type") == "Point":
-        coord = geometry.get("coordinates")
-        if isinstance(coord, list) and len(coord) >= 2:
-            return [float(coord[0]), float(coord[1])]
+        coords = geometry.get("coordinates")
+        if isinstance(coords, list) and len(coords) >= 2:
+            return [float(coords[0]), float(coords[1])]
 
     return None
 
@@ -84,7 +83,7 @@ def calculate_priority_score(
 ) -> tuple[float, list[str]]:
     """Calculate a priority score (0-100) for a map object."""
     score = 50.0
-    reasons = []
+    reasons: list[str] = []
 
     obj_type = str(obj.get("type", ""))
     if obj_type in {"high_value_target", "priority_node"}:
@@ -96,22 +95,22 @@ def calculate_priority_score(
         return 0.0, ["No valid coordinate found"]
 
     # Find closest hub
-    min_distance = float("inf")
+    min_dist = float("inf")
     closest_hub_name = "Unknown Hub"
     for hub in hubs:
         hub_coord = get_coordinate(hub)
         if hub_coord:
-            dist = haversine_m(obj_coord, hub_coord)
-            if dist < min_distance:
-                min_distance = dist
+            dist = haversine_m(obj_coord[0], obj_coord[1], hub_coord[0], hub_coord[1])
+            if dist < min_dist:
+                min_dist = dist
                 closest_hub_name = str(hub.get("name", "Unknown Hub"))
 
-    if min_distance < 10000:
+    if min_dist < 10000:
         score += 15
-        reasons.append(f"Close to hub {closest_hub_name} (<10km)")
-    elif min_distance < 50000:
-        score += 5
-        reasons.append(f"Within 50km of hub {closest_hub_name}")
+        reasons.append(f"Very close to hub: {closest_hub_name}")
+    elif min_dist < 50000:
+        score += 8
+        reasons.append(f"Within operational range of hub: {closest_hub_name}")
 
     # Coverage zone overlap
     for zone in coverage_zones:
@@ -130,15 +129,15 @@ def calculate_priority_score(
             ):
                 in_zone = True
         else:
-            if haversine_m(zone["center"], obj_coord) <= zone["radius_m"]:
+            if haversine_m(obj_coord[0], obj_coord[1], zone["center"][0], zone["center"][1]) <= zone["radius_m"]:
                 in_zone = True
 
         if in_zone:
-            score += 15
-            reasons.append(f"Inside coverage zone: {zone['name']}")
+            score += 12
+            reasons.append(f"Located within coverage area: {zone['name']}")
             break
 
-    # Manual override
+    # Manual override from metadata
     meta = obj.get("metadata", {})
     priority = str(meta.get("priority_level", "")).lower()
     if priority == "high":
@@ -159,7 +158,7 @@ def score_priority(scenario: dict[str, Any]) -> dict[str, Any]:
     objects = scenario.get("objects", [])
     layers = scenario.get("layers", [])
 
-    hubs = [obj for obj in objects if isinstance(obj, dict) and obj.get("type") in {"hub", "base"}]
+    hubs = [o for o in objects if isinstance(o, dict) and o.get("type") in {"hub", "base"}]
 
     coverage_zones = []
     for layer in layers:
@@ -191,35 +190,33 @@ def score_priority(scenario: dict[str, Any]) -> dict[str, Any]:
                     }
                 )
 
-    priority_list = []
+    priority_results = []
 
-    for obj in objects:
+    for obj in scenario.get("objects", []):
         if not isinstance(obj, dict):
             continue
 
-        score, reasons = calculate_priority_score(obj, hubs, coverage_zones)
+        if obj.get("type") in {"high_value_target", "priority_node"}:
+            score, reasons = calculate_priority_score(obj, hubs, coverage_zones)
 
-        if reasons and reasons[0] == "No valid coordinate found":
-            continue
+            if reasons and reasons[0] == "No valid coordinate found":
+                continue
 
-        obj_metadata = obj.setdefault("metadata", {})
-        obj_metadata["priority_score"] = score
-        obj_metadata["priority_reasons"] = reasons
+            obj_metadata = obj.setdefault("metadata", {})
+            obj_metadata["priority_score"] = score
+            obj_metadata["priority_reasons"] = reasons
 
-        priority_list.append(
-            {
+            priority_results.append({
                 "name": obj.get("name"),
                 "type": obj.get("type"),
                 "score": score,
-                "reasons": reasons,
-            }
-        )
+                "reasons": reasons
+            })
 
-    # Sort by score descending
-    priority_list.sort(key=lambda x: x["score"], reverse=True)
+    priority_results.sort(key=lambda x: x["score"], reverse=True)
 
     metadata = scenario.setdefault("metadata", {})
-    metadata["priority_analysis"] = priority_list
+    metadata["priority_analysis"] = priority_results
     return scenario
 
 
@@ -237,25 +234,14 @@ def process_file(input_path: str | Path, output_path: str | Path | None = None) 
     )
     output.write_text(json.dumps(scenario, indent=2, sort_keys=True), encoding="utf-8")
 
-    analysis_path = Path(input_path).parent / "priority_analysis.json"
-    analysis_data = scenario["metadata"]["priority_analysis"]
-    analysis_path.write_text(json.dumps(analysis_data, indent=2, sort_keys=True), encoding="utf-8")
-
-    print(f"Scored scenario saved to: {output}")
-    print(f"Priority analysis saved to: {analysis_path}")
+    print(f"Saved scored scenario to: {output}")
     return scenario
 
 
-def main(argv: list[str] | None = None) -> int:
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Score priority nodes in MILMAP scenario.")
     parser.add_argument("--input", required=True, help="Input scenario JSON.")
     parser.add_argument("--output", help="Output scenario JSON.")
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
     process_file(args.input, args.output)
-    return 0
-
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())

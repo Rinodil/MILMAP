@@ -24,18 +24,18 @@ def load_scenario(path: str | Path) -> dict[str, Any]:
 
 
 def get_phases(scenario: dict[str, Any]) -> list[str]:
-    """Get phases from metadata or use defaults."""
+    """Get phase names from metadata or defaults."""
     return scenario.get("metadata", {}).get("planning_phases") or DEFAULT_PHASES
 
 
 def assign_to_phase(item: dict[str, Any], phases: list[str]) -> str:
-    """Determine which phase an item belongs to based on its type."""
+    """Determine which phase an item belongs to based on its type and current phases."""
     item_type = str(item.get("type", ""))
 
     if item_type in {"threat_dome", "coverage_zone", "hub", "base"}:
         return phases[0] if len(phases) > 0 else "setup"
     elif item_type in {"strike_corridor", "movement_corridor", "approach_corridor"}:
-        return phases[1] if len(phases) > 1 else "deployment"
+        return phases[1] if len(phases) > 1 else (phases[0] if phases else "setup")
     else:
         return phases[-1] if phases else "operations"
 
@@ -90,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Organize MILMAP scenario into phases.")
     parser.add_argument("--input", required=True, help="Input scenario JSON.")
     parser.add_argument("--output", help="Output scenario JSON.")
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
     process_file(args.input, args.output)
     return 0
