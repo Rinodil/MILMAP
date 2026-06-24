@@ -66,6 +66,31 @@ payload plus a combined GeoJSON feature collection:
 PYTHONPATH=src python3 -m milmap_engine.cli examples/scenario_plan.json
 ```
 
+Generate, run, validate, and export the built-in regional coordination example
+with one command:
+
+```bash
+python3 generate_scenario.py --template regional_coordination
+```
+
+This writes `generated_regional_coordination.json`, including the styled
+scenario payload, combined GeoJSON, and QA report. The source scenario template
+also ships as `examples/regional_coordination_scenario.json` and can be run
+through the package CLI:
+
+```bash
+PYTHONPATH=src python3 -m milmap_engine.cli examples/regional_coordination_scenario.json
+```
+
+To also send a Telegram screenshot, start the web workspace first, then run:
+
+```bash
+python3 generate_scenario.py --template regional_coordination --notify
+```
+
+`--notify` saves the generated scenario in the local scenario store and
+deep-links the running workspace before sending the screenshot.
+
 Staged scenario builds sit above `ScenarioPlan`. A caller submits a
 `ScenarioBrief` or ordered `LayerBuildPlan`; the builder executes phases in
 order, attaches phase/source metadata to layers and objects, saves phase
